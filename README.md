@@ -6,6 +6,23 @@ A local-only dashboard that backfills Codex token usage from `~/.codex/sessions`
 
 ![Demo](assets/demo.gif)
 
+## AI-Native Development
+
+This project itself was built through an AI-native development workflow.
+
+- **ChatGPT (GPT-5.5)** was used for system design, planning, architecture discussions, and iterative feature refinement.
+- **Kimi CLI (2.6)** was responsible for implementation and execution tasks.
+
+The repository serves not only as a usage dashboard, but also as an experiment in **multi-agent software engineering workflows**.
+
+The development process intentionally separated:
+
+1. **Planning / reasoning**
+2. **Execution / implementation**
+3. **Human review**
+
+to explore practical agent orchestration patterns for real-world software engineering.
+
 ## Features
 
 - **100% Local** — no cloud upload, no API keys required for the dashboard
