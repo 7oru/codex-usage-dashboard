@@ -64,7 +64,7 @@ This runs `ccusage` under the hood and writes to `public/data/`:
 python3 -m http.server <port>
 ```
 
-Open http://localhost:<port>
+Open `http://localhost:<port>`
 
 ## Data Flow
 
