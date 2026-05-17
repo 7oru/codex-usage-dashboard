@@ -61,10 +61,10 @@ This runs `ccusage` under the hood and writes to `public/data/`:
 ### 3. Start the Dashboard
 
 ```bash
-npm run dev
+python3 -m http.server <port>
 ```
 
-Open http://localhost:5173
+Open http://localhost:<port>
 
 ## Data Flow
 
