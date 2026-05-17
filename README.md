@@ -4,6 +4,8 @@ A local-only dashboard that backfills Codex token usage from `~/.codex/sessions`
 
 > **Privacy First:** This tool only reads local Codex session logs. It does not upload prompts, responses, code, or usage data anywhere. All processing happens in your browser.
 
+![Demo](assets/demo.gif)
+
 ## Features
 
 - **100% Local** — no cloud upload, no API keys required for the dashboard
