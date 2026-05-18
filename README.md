@@ -61,10 +61,10 @@ This runs `ccusage` under the hood and writes to `public/data/`:
 ### 3. Start the Dashboard (Dev)
 
 ```bash
-python3 -m http.server <port>
+npm run dev
 ```
 
-Open `http://localhost:<port>`
+Open http://localhost:5173
 
 ### 4. Build & Open Locally
 
