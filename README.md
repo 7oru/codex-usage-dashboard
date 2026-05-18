@@ -58,13 +58,23 @@ This runs `ccusage` under the hood and writes to `public/data/`:
 
 > Make sure you have Codex sessions in `~/.codex/sessions`. The script uses `npx ccusage` to parse them.
 
-### 3. Start the Dashboard
+### 3. Start the Dashboard (Dev)
 
 ```bash
 python3 -m http.server <port>
 ```
 
 Open `http://localhost:<port>`
+
+### 4. Build & Open Locally
+
+```bash
+npm run build
+open dist/index.html        # macOS
+# Or simply double-click dist/index.html
+```
+
+The production build inlines JSON data directly into the HTML, so `dist/index.html` works out of the box via `file://` — no local server required.
 
 ## Data Flow
 
@@ -124,12 +134,12 @@ The production build uses **esbuild** to bundle JS and **Tailwind CSS CLI** to c
 
 ```bash
 # Preview locally
-cd dist && python3 -m http.server 8080
+open dist/index.html
 
 # Or deploy to GitHub Pages, Vercel, Netlify, Nginx, etc.
 ```
 
-> **Note:** On this machine, Vite's default bundler (Rolldown/Rollup) fails due to macOS code-signing restrictions, so `scripts/build.sh` uses esbuild as a fallback. On most machines, `vite build` works out of the box.
+> **Note:** The build script (`scripts/build.sh`) uses esbuild + Tailwind CSS CLI to produce a fully static `dist/` folder. JSON data is inlined at build time so the dashboard loads without any `fetch` requests — making it usable directly from `file://`.
 
 ## Manual Data Upload
 

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react';
 import type { SessionEntry } from '../types';
 import dayjs from 'dayjs';

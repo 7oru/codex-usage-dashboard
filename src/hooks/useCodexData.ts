@@ -16,10 +16,25 @@ export function useCodexData() {
     let cancelled = false;
     setLoading(true);
 
+    const inline = (typeof window !== 'undefined' && (window as any).__CODEX_DATA__) || null;
+    if (inline && (inline.daily || inline.monthly || inline.sessions)) {
+      const merged: CodexData = {};
+      if (inline.daily) merged.daily = inline.daily;
+      if (inline.monthly) merged.monthly = inline.monthly;
+      if (inline.totals) merged.totals = inline.totals;
+      if (inline.sessions) merged.sessions = inline.sessions;
+      if (!cancelled) {
+        setData(merged);
+        setError(null);
+        setLoading(false);
+      }
+      return () => { cancelled = true; };
+    }
+
     Promise.allSettled([
-      loadFromUrl('/data/codex-daily.json'),
-      loadFromUrl('/data/codex-monthly.json'),
-      loadFromUrl('/data/codex-session.json'),
+      loadFromUrl('./data/codex-daily.json'),
+      loadFromUrl('./data/codex-monthly.json'),
+      loadFromUrl('./data/codex-session.json'),
     ]).then(([dailyRes, monthlyRes, sessionRes]) => {
       if (cancelled) return;
       const merged: CodexData = {};
