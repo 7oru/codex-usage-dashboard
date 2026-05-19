@@ -4,6 +4,8 @@
 
 **面试时别再空口说"我很会用 AI"了——直接把数据拍桌上。**
 
+[English](README.md) | [中文](README.zh.md)
+
 ![Demo](assets/demo.gif)
 
 ## 这东西能干啥
