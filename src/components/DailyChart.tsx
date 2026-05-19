@@ -11,12 +11,7 @@ import {
 } from 'recharts';
 import type { DailyEntry } from '../types';
 import dayjs from 'dayjs';
-
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}k`;
-  return `${n}`;
-}
+import { formatTokens } from '../utils/format';
 
 export default function DailyChart({ daily }: { daily: DailyEntry[] }) {
   const data = useMemo(() => {

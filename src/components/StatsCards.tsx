@@ -9,18 +9,7 @@ import {
 } from 'lucide-react';
 import type { CodexData } from '../types';
 import dayjs from 'dayjs';
-
-function formatTokens(n: number): string {
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return `${n}`;
-}
-
-function formatUSD(n: number): string {
-  if (n >= 1000) return `$${(n / 1000).toFixed(2)}k`;
-  return `$${n.toFixed(2)}`;
-}
+import { formatTokens, formatUSD } from '../utils/format';
 
 export default function StatsCards({ data }: { data: CodexData }) {
   const stats = useMemo(() => {
@@ -33,11 +22,15 @@ export default function StatsCards({ data }: { data: CodexData }) {
 
     const todayStr = dayjs().format('YYYY-MM-DD');
     const todayEntry = daily.find((d) => d.date === todayStr);
-    const todayTokens = todayEntry?.totalTokens ?? 0;
+    // Fallback to most recent day for static builds with frozen data
+    const effectiveToday = todayEntry ?? [...daily].sort((a, b) => b.date.localeCompare(a.date))[0];
+    const todayTokens = effectiveToday?.totalTokens ?? 0;
 
     const monthStr = dayjs().format('YYYY-MM');
     const monthEntry = data.monthly?.find((m) => m.month === monthStr);
-    const monthTokens = monthEntry?.totalTokens ?? 0;
+    const monthlySorted = [...(data.monthly ?? [])].sort((a, b) => b.month.localeCompare(a.month));
+    const effectiveMonth = monthEntry ?? monthlySorted[0];
+    const monthTokens = effectiveMonth?.totalTokens ?? 0;
 
     let longestSessionTokens = 0;
     let mostUsedModel = '-';

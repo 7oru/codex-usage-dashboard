@@ -8,14 +8,9 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import type { CodexData } from '../types';
+import { formatTokens } from '../utils/format';
 
 const COLORS = ['#3b82f6', '#60a5fa', '#10b981', '#8b5cf6', '#f59e0b', '#f43f5e'];
-
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}k`;
-  return `${n}`;
-}
 
 export default function TokenBreakdown({ data }: { data: CodexData }) {
   const { pieData, modelData } = useMemo(() => {

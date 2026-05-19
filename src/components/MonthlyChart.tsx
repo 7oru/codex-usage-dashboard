@@ -10,12 +10,7 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import type { MonthlyEntry } from '../types';
-
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(0)}k`;
-  return `${n}`;
-}
+import { formatTokens } from '../utils/format';
 
 export default function MonthlyChart({ monthly }: { monthly: MonthlyEntry[] }) {
   const data = useMemo(() => {

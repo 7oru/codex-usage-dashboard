@@ -16,7 +16,7 @@ export function useCodexData() {
     let cancelled = false;
     setLoading(true);
 
-    const inline = (typeof window !== 'undefined' && (window as any).__CODEX_DATA__) || null;
+    const inline = (typeof window !== 'undefined' && window.__CODEX_DATA__) || null;
     if (inline && (inline.daily || inline.monthly || inline.sessions)) {
       const merged: CodexData = {};
       if (inline.daily) merged.daily = inline.daily;
@@ -65,11 +65,16 @@ export function useCodexData() {
     reader.onload = (e) => {
       try {
         const json = JSON.parse(e.target?.result as string);
+        if (typeof json !== 'object' || json === null || Array.isArray(json)) {
+          throw new Error('Invalid JSON structure');
+        }
         const merged: CodexData = { ...data };
-        if (json.daily) merged.daily = json.daily;
-        if (json.monthly) merged.monthly = json.monthly;
-        if (json.sessions) merged.sessions = json.sessions;
-        if (json.totals) merged.totals = json.totals;
+        if (Array.isArray(json.daily)) merged.daily = json.daily;
+        if (Array.isArray(json.monthly)) merged.monthly = json.monthly;
+        if (Array.isArray(json.sessions)) merged.sessions = json.sessions;
+        if (typeof json.totals === 'object' && json.totals !== null && !Array.isArray(json.totals)) {
+          merged.totals = json.totals;
+        }
         setData(merged);
         setError(null);
       } catch {

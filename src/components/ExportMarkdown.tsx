@@ -2,18 +2,7 @@ import { useMemo } from 'react';
 import { Download } from 'lucide-react';
 import type { CodexData } from '../types';
 import dayjs from 'dayjs';
-
-function formatTokens(n: number): string {
-  if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(2)}B`;
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return `${n}`;
-}
-
-function formatUSD(n: number): string {
-  if (n >= 1000) return `$${(n / 1000).toFixed(2)}k`;
-  return `$${n.toFixed(2)}`;
-}
+import { formatTokens, formatUSD } from '../utils/format';
 
 export default function ExportMarkdown({ data }: { data: CodexData }) {
   const markdown = useMemo(() => {
@@ -75,9 +64,9 @@ export default function ExportMarkdown({ data }: { data: CodexData }) {
 
     lines.push('', '## Sessions', '', '| Date | Session | Total Tokens | Models | Cost |', '|------|---------|--------------|--------|------|');
 
-    sessions
-      .slice(0, 50)
+    [...sessions]
       .sort((a, b) => b.lastActivity.localeCompare(a.lastActivity))
+      .slice(0, 50)
       .forEach((s) => {
         const models = Object.keys(s.models).join(', ');
         lines.push(
@@ -96,8 +85,11 @@ export default function ExportMarkdown({ data }: { data: CodexData }) {
     const a = document.createElement('a');
     a.href = url;
     a.download = `codex-usage-report-${dayjs().format('YYYY-MM-DD')}.md`;
-    a.click();
-    URL.revokeObjectURL(url);
+    try {
+      a.click();
+    } finally {
+      URL.revokeObjectURL(url);
+    }
   };
 
   return (

@@ -2,16 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { ArrowUpDown, ChevronDown, ChevronUp } from 'lucide-react';
 import type { SessionEntry } from '../types';
 import dayjs from 'dayjs';
-
-function formatTokens(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(2)}M`;
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`;
-  return `${n}`;
-}
-
-function formatUSD(n: number): string {
-  return `$${n.toFixed(3)}`;
-}
+import { formatTokens, formatUSD } from '../utils/format';
 
 type SortKey = 'date' | 'tokens' | 'cost';
 type SortDir = 'asc' | 'desc';

@@ -102,15 +102,18 @@ codex-usage-dashboard/
 │   ├── App.tsx
 │   ├── main.tsx
 │   ├── types.ts
+│   ├── global.d.ts              # Window.__CODEX_DATA__ type declarations
 │   ├── hooks/
-│   │   └── useCodexData.ts      # Fetch + manual upload logic
-│   └── components/
-│       ├── StatsCards.tsx       # Overview cards
-│       ├── DailyChart.tsx       # Daily stacked bar chart
-│       ├── MonthlyChart.tsx     # Monthly bar + cost chart
-│       ├── TokenBreakdown.tsx   # Pie charts for token types & models
-│       ├── SessionTable.tsx     # Sortable / expandable session list
-│       └── ExportMarkdown.tsx   # Portfolio markdown export
+│   │   └── useCodexData.ts      # Fetch + manual upload logic with JSON validation
+│   ├── components/
+│   │   ├── StatsCards.tsx       # Overview cards
+│   │   ├── DailyChart.tsx       # Daily stacked bar chart
+│   │   ├── MonthlyChart.tsx     # Monthly bar + cost chart
+│   │   ├── TokenBreakdown.tsx   # Pie charts for token types & models
+│   │   ├── SessionTable.tsx     # Sortable / expandable session list
+│   │   └── ExportMarkdown.tsx   # Portfolio markdown export
+│   └── utils/
+│       └── format.ts            # Shared number formatting helpers
 ├── package.json
 ├── tailwind.config.js
 └── README.md

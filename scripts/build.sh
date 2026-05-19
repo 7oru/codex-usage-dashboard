@@ -43,7 +43,8 @@ INLINE_JSON=$(
         }
       } catch (e) {}
     }
-    console.log(JSON.stringify(data));
+    const safe = JSON.stringify(data).replace(/<\/script>/gi, '<\\/script>');
+    console.log(safe);
   "
 )
 

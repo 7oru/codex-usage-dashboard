@@ -16,7 +16,7 @@ function App() {
     e.preventDefault();
     setDragOver(false);
     const file = e.dataTransfer.files[0];
-    if (file && file.type === 'application/json') {
+    if (file && file.name.endsWith('.json')) {
       uploadData(file);
     }
   };
