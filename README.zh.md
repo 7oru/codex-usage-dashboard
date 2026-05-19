@@ -70,7 +70,7 @@ open dist/index.html
 - **多维图表** —— 日/月维度 + input/output/reasoning/cached 拆分
 - **Token 明细** —— 饼图看模型占比、看 token 类型分布
 - **Markdown 导出** —— 一键生成可粘贴的报告
-- **多 Agent 预留** —— 已预留 `~/.claude`、`~/.cursor` 接入能力
+- **本地静态构建** —— 打包后直接打开 `dist/index.html`
 
 ## 数据从哪来
 
@@ -90,7 +90,7 @@ public/data/{daily,monthly,session}.json
 codex-usage-dashboard/
 ├── scripts/
 │   ├── export-ccusage-json.sh   # 导出 ccusage JSON
-│   └── build.sh                 # 生产构建 (esbuild + tailwindcss)
+│   └── build.sh                 # 本地静态构建 (esbuild + tailwindcss)
 ├── public/
 │   └── data/                    # 生成的数据 (gitignored)
 │       └── .gitkeep
@@ -115,7 +115,7 @@ codex-usage-dashboard/
 └── README.md
 ```
 
-## 构建与部署
+## 构建与本地预览
 
 ### 开发
 
@@ -123,22 +123,19 @@ codex-usage-dashboard/
 npm run dev           # Vite + HMR
 ```
 
-### 生产
+### 本地静态构建
 
 ```bash
 npm run build         # 输出 dist/，纯静态文件
 ```
 
-产物可以丢到任何静态托管：
+这个静态构建只用于本地查看。脚本会用 esbuild 打包 JS、用 Tailwind CSS CLI 编译 CSS，然后生成一个可直接打开的 `dist/`：
 
 ```bash
-# 本地预览
 open dist/index.html
-
-# 或丢到 GitHub Pages / Vercel / Netlify / Nginx
 ```
 
-> `scripts/build.sh` 用 esbuild + Tailwind CSS CLI 打包，构建时会直接把 JSON 数据内联进 HTML。所以 `dist/index.html` 可以直接双击打开，不需要起服务。
+> **本地隐私提醒**：`npm run build` 会把生成的 usage JSON 内联进 `dist/index.html`。除非你明确想公开这些用量数据，否则不要发布 `dist/`。对外分享时建议用页面里的 Markdown 导出，再按需删改。
 
 ## 手动导入数据
 
@@ -152,14 +149,14 @@ npx ccusage@latest codex session --json > public/data/codex-session.json
 
 然后直接把 JSON 文件拖进页面。
 
-## 换其他 Agent
+## 导出其他 Agent
 
 ```bash
 AGENT=claude npm run export:data
 AGENT=cursor npm run export:data
 ```
 
-或者改 `scripts/export-ccusage-json.sh` 加更多 Agent。
+页面文案目前仍以 Codex 为主，所以非 Codex 导出更适合作为本地临时查看能力，不算完整的多 Agent UI。
 
 ## 这个项目是怎么写的
 

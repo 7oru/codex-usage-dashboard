@@ -1,6 +1,37 @@
 import { useState, useEffect, useCallback } from 'react';
 import type { CodexData } from '../types';
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function mergeUsageJson(target: CodexData, json: unknown): boolean {
+  if (!isRecord(json)) return false;
+
+  let foundUsageData = false;
+  if (Array.isArray(json.daily)) {
+    target.daily = json.daily as CodexData['daily'];
+    foundUsageData = true;
+  }
+  if (Array.isArray(json.monthly)) {
+    target.monthly = json.monthly as CodexData['monthly'];
+    foundUsageData = true;
+  }
+  if (Array.isArray(json.sessions)) {
+    target.sessions = json.sessions as CodexData['sessions'];
+    foundUsageData = true;
+  }
+  if (isRecord(json.totals)) {
+    target.totals = json.totals as CodexData['totals'];
+  }
+
+  return foundUsageData;
+}
+
+function hasUsageData(data: CodexData): boolean {
+  return Boolean(data.daily || data.monthly || data.sessions);
+}
+
 export function useCodexData() {
   const [data, setData] = useState<CodexData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -17,15 +48,16 @@ export function useCodexData() {
     setLoading(true);
 
     const inline = (typeof window !== 'undefined' && window.__CODEX_DATA__) || null;
-    if (inline && (inline.daily || inline.monthly || inline.sessions)) {
+    if (inline) {
       const merged: CodexData = {};
-      if (inline.daily) merged.daily = inline.daily;
-      if (inline.monthly) merged.monthly = inline.monthly;
-      if (inline.totals) merged.totals = inline.totals;
-      if (inline.sessions) merged.sessions = inline.sessions;
+      mergeUsageJson(merged, inline);
       if (!cancelled) {
-        setData(merged);
-        setError(null);
+        if (hasUsageData(merged)) {
+          setData(merged);
+          setError(null);
+        } else {
+          setError('No Codex usage data found. Run `npm run export:data` before building, or upload JSON manually.');
+        }
         setLoading(false);
       }
       return () => { cancelled = true; };
@@ -38,17 +70,10 @@ export function useCodexData() {
     ]).then(([dailyRes, monthlyRes, sessionRes]) => {
       if (cancelled) return;
       const merged: CodexData = {};
-      if (dailyRes.status === 'fulfilled') {
-        merged.daily = dailyRes.value.daily;
-      }
-      if (monthlyRes.status === 'fulfilled') {
-        merged.monthly = monthlyRes.value.monthly;
-        merged.totals = monthlyRes.value.totals;
-      }
-      if (sessionRes.status === 'fulfilled') {
-        merged.sessions = sessionRes.value.sessions;
-      }
-      if (merged.daily || merged.monthly || merged.sessions) {
+      if (dailyRes.status === 'fulfilled') mergeUsageJson(merged, dailyRes.value);
+      if (monthlyRes.status === 'fulfilled') mergeUsageJson(merged, monthlyRes.value);
+      if (sessionRes.status === 'fulfilled') mergeUsageJson(merged, sessionRes.value);
+      if (hasUsageData(merged)) {
         setData(merged);
         setError(null);
       } else {
@@ -65,15 +90,12 @@ export function useCodexData() {
     reader.onload = (e) => {
       try {
         const json = JSON.parse(e.target?.result as string);
-        if (typeof json !== 'object' || json === null || Array.isArray(json)) {
+        if (!isRecord(json)) {
           throw new Error('Invalid JSON structure');
         }
         const merged: CodexData = { ...data };
-        if (Array.isArray(json.daily)) merged.daily = json.daily;
-        if (Array.isArray(json.monthly)) merged.monthly = json.monthly;
-        if (Array.isArray(json.sessions)) merged.sessions = json.sessions;
-        if (typeof json.totals === 'object' && json.totals !== null && !Array.isArray(json.totals)) {
-          merged.totals = json.totals;
+        if (!mergeUsageJson(merged, json)) {
+          throw new Error('No recognized usage data');
         }
         setData(merged);
         setError(null);

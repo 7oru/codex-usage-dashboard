@@ -4,6 +4,8 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 
+mkdir -p "$ROOT_DIR/dist/assets"
+
 echo "[build] Compiling CSS..."
 npx tailwindcss -i "$ROOT_DIR/src/index.css" -o "$ROOT_DIR/dist/assets/index.css" --minify
 
@@ -20,7 +22,8 @@ npx esbuild "$ROOT_DIR/src/main.nocss.tsx" \
 rm "$ROOT_DIR/src/main.nocss.tsx"
 
 echo "[build] Copying public assets..."
-rsync -a "$ROOT_DIR/public/" "$ROOT_DIR/dist/" 2>/dev/null || cp -r "$ROOT_DIR/public/"* "$ROOT_DIR/dist/" 2>/dev/null || true
+cp "$ROOT_DIR/public/favicon.svg" "$ROOT_DIR/dist/favicon.svg"
+rm -f "$ROOT_DIR/dist/data"/codex-*.json
 
 echo "[build] Inline JSON data..."
 INLINE_JSON=$(
@@ -30,10 +33,10 @@ INLINE_JSON=$(
     const root = '$ROOT_DIR';
     const data = {};
     const files = [
-      { file: 'dist/data/codex-daily.json', key: 'daily', extract: 'daily' },
-      { file: 'dist/data/codex-monthly.json', key: 'monthly', extract: 'monthly' },
-      { file: 'dist/data/codex-monthly.json', key: 'totals', extract: 'totals' },
-      { file: 'dist/data/codex-session.json', key: 'sessions', extract: 'sessions' },
+      { file: 'public/data/codex-daily.json', key: 'daily', extract: 'daily' },
+      { file: 'public/data/codex-monthly.json', key: 'monthly', extract: 'monthly' },
+      { file: 'public/data/codex-monthly.json', key: 'totals', extract: 'totals' },
+      { file: 'public/data/codex-session.json', key: 'sessions', extract: 'sessions' },
     ];
     for (const f of files) {
       try {

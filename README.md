@@ -68,7 +68,7 @@ Paste it into your portfolio, GitHub profile README, or LinkedIn featured sectio
 - **Daily / Monthly / Session Charts** — interactive charts powered by Recharts
 - **Token Breakdown** — input / output / reasoning / cached token breakdown
 - **Export Markdown Report** — generate a clean report for recruiters or your portfolio
-- **Multi-Agent Ready** — designed to support `~/.codex`, `~/.claude`, `~/.cursor`
+- **Local Static Build** — build once, then open `dist/index.html` directly
 
 ## Data Flow
 
@@ -88,7 +88,7 @@ public/data/{daily,monthly,session}.json
 codex-usage-dashboard/
 ├── scripts/
 │   ├── export-ccusage-json.sh   # Export ccusage JSON to public/data/
-│   └── build.sh                 # Production build (esbuild + tailwindcss)
+│   └── build.sh                 # Local static build (esbuild + tailwindcss)
 ├── public/
 │   └── data/                    # Generated usage JSON (gitignored)
 │       └── .gitkeep             # Keeps the directory in git
@@ -113,7 +113,7 @@ codex-usage-dashboard/
 └── README.md
 ```
 
-## Build & Deploy
+## Build & Local Preview
 
 ### Development
 
@@ -121,22 +121,19 @@ codex-usage-dashboard/
 npm run dev           # Vite dev server with HMR
 ```
 
-### Production
+### Local static build
 
 ```bash
 npm run build         # Generates dist/ (static files)
 ```
 
-The production build uses **esbuild** to bundle JS and **Tailwind CSS CLI** to compile CSS. Output goes to `dist/`, which can be served by any static host:
+The static build is meant for local viewing only. It uses **esbuild** to bundle JS and **Tailwind CSS CLI** to compile CSS, then writes a self-contained `dist/` folder:
 
 ```bash
-# Preview locally
 open dist/index.html
-
-# Or deploy to GitHub Pages, Vercel, Netlify, Nginx, etc.
 ```
 
-> **Note:** The build script (`scripts/build.sh`) uses esbuild + Tailwind CSS CLI to produce a fully static `dist/` folder. JSON data is inlined at build time so the dashboard loads without any `fetch` requests — making it usable directly from `file://`.
+> **Local privacy note:** `npm run build` inlines your generated usage JSON into `dist/index.html`. Do not publish `dist/` unless you intentionally want to share that usage data. For sharing, use the dashboard's Markdown export and edit it as needed.
 
 ## Manual Data Upload
 
@@ -150,7 +147,7 @@ npx ccusage@latest codex session --json > public/data/codex-session.json
 
 Then drag and drop the JSON files directly into the dashboard UI.
 
-## Custom Agent
+## Custom Agent Export
 
 You can switch the target agent via environment variable:
 
@@ -159,7 +156,7 @@ AGENT=claude npm run export:data
 AGENT=cursor npm run export:data
 ```
 
-Or edit `scripts/export-ccusage-json.sh` to add more agents.
+The dashboard still uses Codex-oriented labels, so treat non-Codex exports as a local convenience rather than a fully branded multi-agent UI.
 
 ## AI-Native Development
 
