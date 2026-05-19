@@ -4,6 +4,8 @@
 
 **Show recruiters how much AI-assisted coding you actually did.**
 
+[English](README.md) | [中文](README.zh.md)
+
 ![Demo](assets/demo.gif)
 
 ## Why?
