@@ -42,4 +42,4 @@ else
   rm -f "$OUTPUT_DIR/codex-session.json"
 fi
 
-echo "[export] Done. Start the dev server with: npm run dev"
+echo "[export] Done. Build the static site with: npm run build && open dist/index.html"
