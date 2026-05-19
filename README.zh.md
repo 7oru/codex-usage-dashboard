@@ -173,7 +173,7 @@ AGENT=cursor npm run export:data
 1. **规划 / 推理**（ChatGPT / Codex）
 2. **执行 / 实现**（Kimi CLI）
 3. **Code Review & 迭代**（ChatGPT / Codex）
-4. **验收把关**（人）
+4. **本地试跑 & 检查**（人）—— 看看能不能跑起来、README 有没有问题
 
 用来探索真实工程里的多 Agent 协作模式。
 
