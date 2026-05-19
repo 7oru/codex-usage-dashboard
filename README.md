@@ -165,16 +165,16 @@ Or edit `scripts/export-ccusage-json.sh` to add more agents.
 
 This project itself was built through an AI-native development workflow.
 
-- **ChatGPT (GPT-5.5)** was used for system design, planning, architecture discussions, and iterative feature refinement.
-- **Kimi CLI (2.6)** was responsible for implementation and execution tasks.
+- **ChatGPT (GPT-5.5 / Codex)** — system design, planning, architecture discussions, and code review
+- **Kimi CLI (2.6)** — implementation and execution
 
 The repository serves not only as a usage dashboard, but also as an experiment in **multi-agent software engineering workflows**.
 
 The development process intentionally separated:
 
-1. **Planning / reasoning**
-2. **Execution / implementation**
-3. **Human review**
+1. **Planning / reasoning** (ChatGPT / Codex)
+2. **Execution / implementation** (Kimi CLI)
+3. **Code review & iteration** (ChatGPT / Codex)
 
 to explore practical agent orchestration patterns for real-world software engineering.
 

@@ -163,14 +163,14 @@ AGENT=cursor npm run export:data
 
 本项目本身就是 **AI-Native 开发** 的实验场。
 
-- **ChatGPT (GPT-5.5)** 做架构设计、需求拆解、方案评审
-- **Kimi CLI (2.6)** 写代码、跑构建、修 bug
+- **ChatGPT (GPT-5.5 / Codex)** —— 架构设计、需求拆解、方案评审、Code Review
+- **Kimi CLI (2.6)** —— 写代码、跑构建、修 bug
 
 整个流程刻意拆成三步：
 
-1. **规划 / 推理**（Agent 想）
-2. **执行 / 实现**（Agent 写）
-3. **人工审查**（人把关）
+1. **规划 / 推理**（ChatGPT / Codex）
+2. **执行 / 实现**（Kimi CLI）
+3. **Code Review & 迭代**（ChatGPT / Codex）
 
 用来探索真实工程里的多 Agent 协作模式。
 
