@@ -1,80 +1,72 @@
-# Codex Local Usage Dashboard
+# Codex Usage Dashboard
 
-A local-only dashboard that backfills Codex token usage from `~/.codex/sessions`.
+> Visualize your local Codex sessions and export an AI-native engineering report.
 
-> **Privacy First:** This tool only reads local Codex session logs. It does not upload prompts, responses, code, or usage data anywhere. All processing happens in your browser.
+**Show recruiters how much AI-assisted coding you actually did.**
 
 ![Demo](assets/demo.gif)
 
-## AI-Native Development
+## Why?
 
-This project itself was built through an AI-native development workflow.
+Recruiters ask *"How do you use AI?"* — now you can show them the receipts.
 
-- **ChatGPT (GPT-5.5)** was used for system design, planning, architecture discussions, and iterative feature refinement.
-- **Kimi CLI (2.6)** was responsible for implementation and execution tasks.
+This dashboard reads your local `~/.codex/sessions` logs, crunches the numbers, and produces charts + a downloadable Markdown report you can paste straight into your portfolio, GitHub README, or LinkedIn featured section.
 
-The repository serves not only as a usage dashboard, but also as an experiment in **multi-agent software engineering workflows**.
-
-The development process intentionally separated:
-
-1. **Planning / reasoning**
-2. **Execution / implementation**
-3. **Human review**
-
-to explore practical agent orchestration patterns for real-world software engineering.
-
-## Features
-
-- **100% Local** — no cloud upload, no API keys required for the dashboard
-- **Backfill Historical Sessions** — visualize all your past Codex usage
-- **Daily / Monthly / Session Charts** — interactive charts powered by Recharts
-- **Token Breakdown** — input / output / reasoning / cached token breakdown
-- **Export Markdown Report** — generate a clean report for your portfolio or recruiters
-- **Multi-Agent Ready** — designed to support `~/.codex`, `~/.claude`, `~/.cursor`
+> **Privacy First:** Everything stays local. No cloud upload, no API keys, no data leaves your machine.
 
 ## Quick Start
 
-### 1. Clone & Install
-
 ```bash
-git clone <repo-url>
+git clone https://github.com/7oru/codex-usage-dashboard.git
 cd codex-usage-dashboard
 npm install
+npm run export:data   # Scans ~/.codex/sessions
+npm run dev           # http://localhost:5173
 ```
 
-### 2. Export Usage Data
-
-The dashboard reads pre-exported JSON files. Run the export script:
-
-```bash
-npm run export:data
-```
-
-This runs `ccusage` under the hood and writes to `public/data/`:
-
-- `codex-daily.json`
-- `codex-monthly.json`
-- `codex-session.json`
-
-> Make sure you have Codex sessions in `~/.codex/sessions`. The script uses `npx ccusage` to parse them.
-
-### 3. Start the Dashboard (Dev)
-
-```bash
-npm run dev
-```
-
-Open http://localhost:5173
-
-### 4. Build & Open Locally
+Or build a static version you can open via `file://`:
 
 ```bash
 npm run build
-open dist/index.html        # macOS
-# Or simply double-click dist/index.html
+open dist/index.html
 ```
 
-The production build inlines JSON data directly into the HTML, so `dist/index.html` works out of the box via `file://` — no local server required.
+## Portfolio Export Example
+
+Click **Download Markdown Report** inside the dashboard to generate a summary like this — real numbers from your actual sessions:
+
+```markdown
+# Codex Usage Report
+
+> Generated at 2026-05-19
+> Data source: local `~/.codex/sessions`
+
+## Overview
+
+- **Lifetime Tokens**: 346.9M
+- **Estimated Cost**: $270.71
+- **Most Active Day**: 2026-05-08 (132.0M tokens)
+- **Average Daily Usage**: 69.3M
+- **Most Used Model**: gpt-5.5
+
+## Daily Breakdown
+
+| Date       | Input   | Cached  | Output  | Reasoning | Total   | Cost   |
+|------------|---------|---------|---------|-----------|---------|--------|
+| 2026-05-08 | 131.4M  | 124.2M  | 575.2k  | 222.9k    | 132.0M  | $91.24 |
+| ...        | ...     | ...     | ...     | ...       | ...     | ...    |
+```
+
+Paste it into your portfolio, GitHub profile README, or LinkedIn featured section. Let the numbers speak.
+
+## Features
+
+- **100% Local** — no cloud upload, no API keys required
+- **Backfill Historical Sessions** — visualize all your past Codex usage
+- **Daily / Monthly / Session Charts** — interactive charts powered by Recharts
+- **Token Breakdown** — input / output / reasoning / cached token breakdown
+- **Export Markdown Report** — generate a clean report for recruiters or your portfolio
+- **Multi-Agent Ready** — designed to support `~/.codex`, `~/.claude`, `~/.cursor`
 
 ## Data Flow
 
@@ -167,21 +159,22 @@ AGENT=cursor npm run export:data
 
 Or edit `scripts/export-ccusage-json.sh` to add more agents.
 
-## Portfolio Export
+## AI-Native Development
 
-Click **Download Markdown Report** to generate a summary like:
+This project itself was built through an AI-native development workflow.
 
-```markdown
-# Codex Usage Report
+- **ChatGPT (GPT-5.5)** was used for system design, planning, architecture discussions, and iterative feature refinement.
+- **Kimi CLI (2.6)** was responsible for implementation and execution tasks.
 
-- **Lifetime Tokens**: 346.9M
-- **Estimated Cost**: $270.71
-- **Most Active Day**: 2026-05-08 (132.0M)
-- **Average Daily Usage**: 69.3M
-- **Most Used Model**: gpt-5.5
-```
+The repository serves not only as a usage dashboard, but also as an experiment in **multi-agent software engineering workflows**.
 
-Perfect for documenting AI-assisted development workflows in your README or portfolio.
+The development process intentionally separated:
+
+1. **Planning / reasoning**
+2. **Execution / implementation**
+3. **Human review**
+
+to explore practical agent orchestration patterns for real-world software engineering.
 
 ## Tech Stack
 
