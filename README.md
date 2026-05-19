@@ -175,6 +175,7 @@ The development process intentionally separated:
 1. **Planning / reasoning** (ChatGPT / Codex)
 2. **Execution / implementation** (Kimi CLI)
 3. **Code review & iteration** (ChatGPT / Codex)
+4. **Acceptance** (Human)
 
 to explore practical agent orchestration patterns for real-world software engineering.
 

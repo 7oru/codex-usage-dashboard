@@ -168,11 +168,12 @@ AGENT=cursor npm run export:data
 - **ChatGPT (GPT-5.5 / Codex)** —— 架构设计、需求拆解、方案评审、Code Review
 - **Kimi CLI (2.6)** —— 写代码、跑构建、修 bug
 
-整个流程刻意拆成三步：
+整个流程刻意拆成四步：
 
 1. **规划 / 推理**（ChatGPT / Codex）
 2. **执行 / 实现**（Kimi CLI）
 3. **Code Review & 迭代**（ChatGPT / Codex）
+4. **验收把关**（人）
 
 用来探索真实工程里的多 Agent 协作模式。
 
