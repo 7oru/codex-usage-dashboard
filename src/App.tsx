@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Shield, Upload, Loader2, Database, BarChart3, Boxes, LineChart } from 'lucide-react';
-import { useCodexData } from './hooks/useCodexData';
+import { useUsageData } from './hooks/useUsageData';
 import StatsCards from './components/StatsCards';
 import DailyChart from './components/DailyChart';
 import MonthlyChart from './components/MonthlyChart';
@@ -14,7 +14,7 @@ import { summarizeUsage } from './utils/usage';
 type ViewMode = 'overview' | 'sources' | 'models';
 
 function App() {
-  const { data, loading, error, uploadData } = useCodexData();
+  const { data, loading, error, uploadData } = useUsageData();
   const [dragOver, setDragOver] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('overview');
   const summary = useMemo(() => (data ? summarizeUsage(data) : null), [data]);

@@ -18,62 +18,151 @@ mkdir -p "$OUTPUT_DIR"
 
 SOURCE="${SOURCE:-${AGENT:-}}"
 SOURCES="${SOURCES:-}"
+CCUSAGE_REPORT_TIMEOUT_SECONDS="${CCUSAGE_REPORT_TIMEOUT_SECONDS:-90}"
+SUPPORTED_SOURCES=(
+  claude
+  codex
+  opencode
+  amp
+  droid
+  codebuff
+  hermes
+  pi
+  goose
+  openclaw
+  kilo
+  kimi
+  qwen
+  copilot
+  gemini
+)
+
+EXPORTED_SOURCES=()
+
+path_has_files() {
+  local path="$1"
+  shift
+
+  [[ -e "$path" ]] || return 1
+  find "$path" "$@" -print -quit 2>/dev/null | grep -q .
+}
+
+json_has_usage() {
+  local file="$1"
+  local report="$2"
+
+  node -e "
+    const fs = require('fs');
+    const file = process.argv[1];
+    const report = process.argv[2];
+    const json = JSON.parse(fs.readFileSync(file, 'utf8'));
+    const key = report === 'session' ? 'sessions' : report;
+    const rows = Array.isArray(json[key]) ? json[key] : Array.isArray(json.data) ? json.data : [];
+    const totals = json.totals || json.summary || {};
+    const rowTokens = rows.reduce((sum, row) => sum + Number(row.totalTokens || 0), 0);
+    const totalTokens = Number(totals.totalTokens || 0);
+    process.exit(Math.max(rowTokens, totalTokens) > 0 ? 0 : 1);
+  " "$file" "$report"
+}
+
+source_has_local_data() {
+  local source="$1"
+
+  case "$source" in
+    claude)
+      path_has_files "${CLAUDE_CONFIG_DIR:-$HOME/.config/claude}/projects" -type f -name '*.jsonl' ||
+        path_has_files "$HOME/.claude/projects" -type f -name '*.jsonl'
+      ;;
+    codex)
+      path_has_files "${CODEX_HOME:-$HOME/.codex}/sessions" -type f
+      ;;
+    opencode)
+      path_has_files "${OPENCODE_DATA_DIR:-$HOME/.local/share/opencode}" -type f
+      ;;
+    amp)
+      path_has_files "${AMP_DATA_DIR:-$HOME/.local/share/amp}" -type f
+      ;;
+    droid)
+      path_has_files "${DROID_SESSIONS_DIR:-$HOME/.factory/sessions}" -type f
+      ;;
+    codebuff)
+      path_has_files "${CODEBUFF_DATA_DIR:-$HOME/.config/manicode}" -type f
+      ;;
+    hermes)
+      path_has_files "${HERMES_HOME:-$HOME/.hermes}" -type f
+      ;;
+    pi)
+      path_has_files "${PI_AGENT_DIR:-$HOME/.pi/agent/sessions}" -type f
+      ;;
+    goose)
+      path_has_files "${GOOSE_PATH_ROOT:-$HOME/.local/share/goose}" -type f ||
+        path_has_files "$HOME/.config/goose" -type f
+      ;;
+    openclaw)
+      path_has_files "${OPENCLAW_DIR:-$HOME/.openclaw}/agents" -type f -name '*session*.jsonl'
+      ;;
+    kilo)
+      path_has_files "${KILO_DATA_DIR:-$HOME/.local/share/kilo}" -type f -name '*.jsonl'
+      ;;
+    kimi)
+      path_has_files "${KIMI_DATA_DIR:-$HOME/.kimi}/sessions" -type f ||
+        path_has_files "${KIMI_DATA_DIR:-$HOME/.kimi}" -type f -name 'wire.jsonl'
+      ;;
+    qwen)
+      path_has_files "${QWEN_DATA_DIR:-$HOME/.qwen}" -type f
+      ;;
+    copilot)
+      [[ -n "${COPILOT_OTEL_FILE_EXPORTER_PATH:-}" && -f "$COPILOT_OTEL_FILE_EXPORTER_PATH" ]]
+      ;;
+    gemini)
+      path_has_files "${GEMINI_DATA_DIR:-$HOME/.gemini/tmp}" -type f
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
 
 run_ccusage_export() {
   local source="$1"
   local report="$2"
   local output_file="$3"
-  local label="all sources"
+  local tmp_file
+  local timeout_runner
 
-  if [[ -n "$source" ]]; then
-    label="$source"
-    if npx ccusage@latest "$source" "$report" --json > "$output_file" 2>/dev/null; then
-      echo "[export] ✓ $output_file ($label $report)"
-      return 0
+  tmp_file="$(mktemp)"
+  timeout_runner='
+    my $timeout = shift @ARGV;
+    my $pid = fork();
+    die "fork failed\n" unless defined $pid;
+    if ($pid == 0) {
+      exec @ARGV;
+      exit 127;
+    }
+    my $timed_out = 0;
+    local $SIG{ALRM} = sub { $timed_out = 1; kill "TERM", $pid; };
+    alarm $timeout;
+    waitpid($pid, 0);
+    alarm 0;
+    exit 124 if $timed_out;
+    exit(($? >> 8) || (($? & 127) ? 1 : 0));
+  '
+  if perl -e "$timeout_runner" "$CCUSAGE_REPORT_TIMEOUT_SECONDS" \
+    npx ccusage@latest "$source" "$report" --json > "$tmp_file" 2>/dev/null; then
+    if ! json_has_usage "$tmp_file" "$report"; then
+      rm -f "$tmp_file" "$output_file"
+      return 1
     fi
-  else
-    if npx ccusage@latest "$report" --json > "$output_file" 2>/dev/null; then
-      echo "[export] ✓ $output_file ($label $report)"
-      return 0
-    fi
+    mv "$tmp_file" "$output_file"
+    return 0
   fi
 
-  echo "[export] ✗ Failed to export $report data for $label"
-  rm -f "$output_file"
+  rm -f "$tmp_file" "$output_file"
   return 1
 }
 
-export_unified() {
-  echo "[export] Detecting ccusage data across all supported sources..."
-  run_ccusage_export "" daily "$OUTPUT_DIR/usage-daily.json" || true
-  run_ccusage_export "" monthly "$OUTPUT_DIR/usage-monthly.json" || true
-  run_ccusage_export "" session "$OUTPUT_DIR/usage-session.json" || true
-  rm -f "$OUTPUT_DIR/manifest.json"
-}
-
-export_source() {
-  local source="$1"
-  local base_dir="$2"
-  local daily_file="$base_dir/${source}-daily.json"
-  local monthly_file="$base_dir/${source}-monthly.json"
-  local session_file="$base_dir/${source}-session.json"
-
-  run_ccusage_export "$source" daily "$daily_file" || true
-  run_ccusage_export "$source" monthly "$monthly_file" || true
-  run_ccusage_export "$source" session "$session_file" || true
-}
-
-if [[ -n "$SOURCES" ]]; then
-  mkdir -p "$SOURCE_OUTPUT_DIR"
-  rm -f "$OUTPUT_DIR/manifest.json"
-  IFS=',' read -ra SOURCE_LIST <<< "$SOURCES"
-
-  echo "[export] Exporting focused ccusage data for: $SOURCES"
-  for source in "${SOURCE_LIST[@]}"; do
-    source="$(echo "$source" | xargs)"
-    [[ -z "$source" ]] && continue
-    export_source "$source" "$SOURCE_OUTPUT_DIR"
-  done
+write_manifest() {
+  local sources_csv="$1"
 
   node -e "
     const fs = require('fs');
@@ -89,16 +178,84 @@ if [[ -n "$SOURCES" ]]; then
       })),
     };
     fs.writeFileSync(path.join(outputDir, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
-  " "$OUTPUT_DIR" "$SOURCES"
+  " "$OUTPUT_DIR" "$sources_csv"
+
   echo "[export] ✓ $OUTPUT_DIR/manifest.json"
+}
+
+export_source() {
+  local source="$1"
+  local base_dir="$2"
+  local daily_file="$base_dir/${source}-daily.json"
+  local monthly_file="$base_dir/${source}-monthly.json"
+  local session_file="$base_dir/${source}-session.json"
+  local exported=0
+
+  run_ccusage_export "$source" daily "$daily_file" && exported=1
+  if [[ "$exported" -eq 0 ]]; then
+    return 1
+  fi
+
+  run_ccusage_export "$source" monthly "$monthly_file" || true
+  run_ccusage_export "$source" session "$session_file" || true
+
+  if [[ "$exported" -eq 1 ]]; then
+    EXPORTED_SOURCES+=("$source")
+    echo "[export] ✓ $source"
+    return 0
+  fi
+
+  return 1
+}
+
+export_sources_to_manifest() {
+  local sources=("$@")
+  local sources_csv
+
+  rm -rf "$SOURCE_OUTPUT_DIR"
+  mkdir -p "$SOURCE_OUTPUT_DIR"
+  rm -f "$OUTPUT_DIR/manifest.json" "$OUTPUT_DIR"/usage-*.json
+  EXPORTED_SOURCES=()
+
+  for source in "${sources[@]}"; do
+    source="$(echo "$source" | xargs)"
+    [[ -z "$source" ]] && continue
+    if ! source_has_local_data "$source"; then
+      echo "[export] - $source (no local data path found)"
+      continue
+    fi
+    export_source "$source" "$SOURCE_OUTPUT_DIR" || true
+  done
+
+  if [[ "${#EXPORTED_SOURCES[@]}" -eq 0 ]]; then
+    echo "[export] No ccusage source data found."
+    return 1
+  fi
+
+  sources_csv="$(IFS=','; echo "${EXPORTED_SOURCES[*]}")"
+  write_manifest "$sources_csv"
+  echo "[export] Exported sources: $sources_csv"
+}
+
+if [[ -n "$SOURCES" ]]; then
+  IFS=',' read -ra SOURCE_LIST <<< "$SOURCES"
+  echo "[export] Exporting focused ccusage data for: $SOURCES"
+  export_sources_to_manifest "${SOURCE_LIST[@]}" || true
 elif [[ -n "$SOURCE" ]]; then
   echo "[export] Exporting focused ccusage data for: $SOURCE"
-  run_ccusage_export "$SOURCE" daily "$OUTPUT_DIR/usage-daily.json" || true
-  run_ccusage_export "$SOURCE" monthly "$OUTPUT_DIR/usage-monthly.json" || true
-  run_ccusage_export "$SOURCE" session "$OUTPUT_DIR/usage-session.json" || true
+  rm -f "$OUTPUT_DIR/manifest.json"
+  exported=0
+  run_ccusage_export "$SOURCE" daily "$OUTPUT_DIR/usage-daily.json" && echo "[export] ✓ $OUTPUT_DIR/usage-daily.json"
+  [[ -f "$OUTPUT_DIR/usage-daily.json" ]] && exported=1
+  run_ccusage_export "$SOURCE" monthly "$OUTPUT_DIR/usage-monthly.json" && echo "[export] ✓ $OUTPUT_DIR/usage-monthly.json"
+  [[ -f "$OUTPUT_DIR/usage-monthly.json" ]] && exported=1
+  run_ccusage_export "$SOURCE" session "$OUTPUT_DIR/usage-session.json" && echo "[export] ✓ $OUTPUT_DIR/usage-session.json"
+  [[ -f "$OUTPUT_DIR/usage-session.json" ]] && exported=1
+  [[ "$exported" -eq 0 ]] && echo "[export] No ccusage data found for source: $SOURCE"
   rm -f "$OUTPUT_DIR/manifest.json"
 else
-  export_unified
+  echo "[export] Detecting ccusage data by source..."
+  export_sources_to_manifest "${SUPPORTED_SOURCES[@]}" || true
 fi
 
 echo "[export] Done. Build the static site with: npm run build && open dist/index.html"

@@ -45,6 +45,107 @@ function emptyTotals(): UsageTotals {
   };
 }
 
+function toNumber(value: unknown): number {
+  return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function normalizeTotals(entry: Record<string, unknown>): UsageTotals {
+  const inputTokens = toNumber(entry.inputTokens) || toNumber(entry.totalInputTokens);
+  const cachedInputTokens =
+    toNumber(entry.cachedInputTokens) ||
+    toNumber(entry.cacheCreationTokens) + toNumber(entry.cacheReadTokens) ||
+    toNumber(entry.cacheReadTokens) ||
+    toNumber(entry.totalCacheReadTokens);
+  const outputTokens = toNumber(entry.outputTokens) || toNumber(entry.totalOutputTokens);
+  const reasoningOutputTokens = toNumber(entry.reasoningOutputTokens);
+
+  return {
+    inputTokens,
+    cachedInputTokens,
+    outputTokens,
+    reasoningOutputTokens,
+    totalTokens: toNumber(entry.totalTokens) || inputTokens + cachedInputTokens + outputTokens + reasoningOutputTokens,
+    costUSD: toNumber(entry.costUSD) || toNumber(entry.totalCost) || toNumber(entry.totalCostUSD),
+  };
+}
+
+function normalizeModels(entry: Record<string, unknown>, totals: UsageTotals): Record<string, ModelUsage> {
+  const breakdown = entry.breakdown ?? entry.models;
+  if (breakdown && typeof breakdown === 'object' && !Array.isArray(breakdown)) {
+    return Object.fromEntries(
+      Object.entries(breakdown as Record<string, Record<string, unknown>>).map(([name, model]) => {
+        const modelTotals = normalizeTotals(model);
+        return [
+          name,
+          {
+            ...modelTotals,
+            isFallback: Boolean(model.isFallback),
+          },
+        ];
+      })
+    );
+  }
+
+  if (entry.models && typeof entry.models === 'object' && !Array.isArray(entry.models)) {
+    return Object.fromEntries(
+      Object.entries(entry.models as Record<string, Record<string, unknown>>).map(([name, model]) => {
+        const modelTotals = normalizeTotals(model);
+        return [
+          name,
+          {
+            ...modelTotals,
+            isFallback: Boolean(model.isFallback),
+          },
+        ];
+      })
+    );
+  }
+
+  if (Array.isArray(entry.modelBreakdowns)) {
+    const modelEntries = entry.modelBreakdowns
+      .map((model) => (typeof model === 'object' && model !== null ? model as Record<string, unknown> : null))
+      .filter((model): model is Record<string, unknown> => Boolean(model));
+
+    if (modelEntries.length > 0) {
+      return Object.fromEntries(
+        modelEntries.map((model, index) => {
+          const name = String(model.model ?? model.modelName ?? model.name ?? `model-${index + 1}`);
+          const modelTotals = normalizeTotals(model);
+          return [
+            name,
+            {
+              ...modelTotals,
+              isFallback: Boolean(model.isFallback),
+            },
+          ];
+        })
+      );
+    }
+  }
+
+  const modelsUsed = Array.isArray(entry.modelsUsed)
+    ? entry.modelsUsed.filter((model): model is string => typeof model === 'string' && model.length > 0)
+    : Array.isArray(entry.models)
+      ? entry.models.filter((model): model is string => typeof model === 'string' && model.length > 0)
+    : [];
+  if (modelsUsed.length === 0) return {};
+
+  const divisor = modelsUsed.length;
+  return Object.fromEntries(
+    modelsUsed.map((name) => [
+      name,
+      {
+        inputTokens: Math.round(totals.inputTokens / divisor),
+        cachedInputTokens: Math.round(totals.cachedInputTokens / divisor),
+        outputTokens: Math.round(totals.outputTokens / divisor),
+        reasoningOutputTokens: Math.round(totals.reasoningOutputTokens / divisor),
+        totalTokens: Math.round(totals.totalTokens / divisor),
+        isFallback: false,
+      },
+    ])
+  );
+}
+
 function addUsage(target: UsageTotals, entry: Partial<UsageTotals>) {
   TOKEN_KEYS.forEach((key) => {
     target[key] += Number(entry[key] ?? 0);
@@ -65,12 +166,51 @@ function normalizeEntrySource<T extends { source?: string; agent?: string }>(ent
   return { ...entry, source: normalizeSourceName(fallbackSource) };
 }
 
+function normalizeDailyEntry(entry: DailyEntry | Record<string, unknown>, fallbackSource?: string): DailyEntry {
+  const record = entry as Record<string, unknown>;
+  const totals = normalizeTotals(record);
+  return normalizeEntrySource({
+    date: String(record.date ?? ''),
+    source: typeof record.source === 'string' ? record.source : undefined,
+    agent: typeof record.agent === 'string' ? record.agent : undefined,
+    ...totals,
+    models: normalizeModels(record, totals),
+  }, fallbackSource);
+}
+
+function normalizeMonthlyEntry(entry: MonthlyEntry | Record<string, unknown>, fallbackSource?: string): MonthlyEntry {
+  const record = entry as Record<string, unknown>;
+  const totals = normalizeTotals(record);
+  return normalizeEntrySource({
+    month: String(record.month ?? ''),
+    source: typeof record.source === 'string' ? record.source : undefined,
+    agent: typeof record.agent === 'string' ? record.agent : undefined,
+    ...totals,
+    models: normalizeModels(record, totals),
+  }, fallbackSource);
+}
+
+function normalizeSessionEntry(entry: SessionEntry | Record<string, unknown>, fallbackSource?: string): SessionEntry {
+  const record = entry as Record<string, unknown>;
+  const totals = normalizeTotals(record);
+  return normalizeEntrySource({
+    sessionId: String(record.sessionId ?? record.session ?? record.id ?? ''),
+    lastActivity: String(record.lastActivity ?? record.date ?? ''),
+    sessionFile: String(record.sessionFile ?? record.sessionId ?? record.session ?? record.id ?? ''),
+    directory: String(record.directory ?? ''),
+    source: typeof record.source === 'string' ? record.source : undefined,
+    agent: typeof record.agent === 'string' ? record.agent : undefined,
+    ...totals,
+    models: normalizeModels(record, totals),
+  }, fallbackSource);
+}
+
 export function normalizeUsageData(data: UsageData, fallbackSource?: string): UsageData {
   return {
-    daily: data.daily?.map((entry) => normalizeEntrySource(entry, fallbackSource)),
-    monthly: data.monthly?.map((entry) => normalizeEntrySource(entry, fallbackSource)),
-    sessions: data.sessions?.map((entry) => normalizeEntrySource(entry, fallbackSource)),
-    totals: data.totals,
+    daily: data.daily?.map((entry) => normalizeDailyEntry(entry, fallbackSource)),
+    monthly: data.monthly?.map((entry) => normalizeMonthlyEntry(entry, fallbackSource)),
+    sessions: data.sessions?.map((entry) => normalizeSessionEntry(entry, fallbackSource)),
+    totals: data.totals ? normalizeTotals(data.totals as unknown as Record<string, unknown>) : undefined,
   };
 }
 

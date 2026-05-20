@@ -67,7 +67,7 @@ open dist/index.html
 
 - **100% 本地运行** —— 零上传、零配置、零 API Key
 - **回溯历史** —— 把以前所有本地 AI coding 会话一次性可视化
-- **多 Source 概览** —— 聚合 Codex、Claude Code、OpenClaw、Gemini CLI 等 ccusage 来源
+- **多 Source 概览** —— 聚合本机所有非零用量的 ccusage source
 - **多维图表** —— 日/月维度 + input/output/reasoning/cached 拆分
 - **模型视图** —— Top models、每日模型趋势、source × model 明细
 - **Token 明细** —— 饼图看模型占比、看 token 类型分布
@@ -79,9 +79,9 @@ open dist/index.html
 ```
 ccusage 支持的本地会话路径
         ↓
-  ccusage --json
+  path gate + ccusage --json
         ↓
-public/data/usage-{daily,monthly,session}.json
+public/data/usage-*.json 或 manifest 指向的 public/data/sources/*.json
         ↓
    浏览器里的 React 仪表盘
 ```
@@ -92,7 +92,7 @@ public/data/usage-{daily,monthly,session}.json
 
 `claude`, `codex`, `opencode`, `amp`, `droid`, `codebuff`, `hermes`, `pi`, `goose`, `openclaw`, `kilo`, `kimi`, `qwen`, `copilot`, `gemini`。
 
-Sources 页面会展示每个 source 的默认 session path 或环境变量，方便排查为什么某个工具没有被导出。
+Sources 页面会展示每个 source 的默认 session path 或环境变量，方便排查为什么某个工具没有被导出。导出脚本会先检查对应本地路径是否存在，再只保留 ccusage JSON 里 `totalTokens` 大于 0 的 source。像 OpenClaw 这种工具即使已经配置，如果本地文件里没有 ccusage 能读到的 token usage，也会被跳过；通过 provider 产生的用量可能会显示在 provider 自己的 source 下，比如 Kimi。
 
 ## 目录结构
 
@@ -111,7 +111,7 @@ codex-usage-dashboard/
 │   ├── global.d.ts              # Window.__USAGE_DATA__ 类型声明
 │   ├── sources.ts               # ccusage source registry
 │   ├── hooks/
-│   │   └── useCodexData.ts      # 数据获取 + 手动上传（含 JSON 校验）
+│   │   └── useUsageData.ts      # 数据获取 + 手动上传（含 JSON 校验）
 │   ├── components/
 │   │   ├── StatsCards.tsx       # 概览卡片
 │   │   ├── DailyChart.tsx       # 每日堆叠柱状图
@@ -153,12 +153,12 @@ open dist/index.html
 
 ## 手动导入数据
 
-不想跑脚本？手动生成 JSON 也行：
+不想跑脚本？也可以手动给某个 source 生成 JSON：
 
 ```bash
-npx ccusage@latest daily --json > public/data/usage-daily.json
-npx ccusage@latest monthly --json > public/data/usage-monthly.json
-npx ccusage@latest session --json > public/data/usage-session.json
+npx ccusage@latest codex daily --json > public/data/usage-daily.json
+npx ccusage@latest codex monthly --json > public/data/usage-monthly.json
+npx ccusage@latest codex session --json > public/data/usage-session.json
 ```
 
 然后直接把 JSON 文件拖进页面。
@@ -167,7 +167,7 @@ npx ccusage@latest session --json > public/data/usage-session.json
 
 ## 只导出某个 Source
 
-默认会导出 ccusage 能检测到的所有 source。也可以只看某一个：
+默认会探测所有支持的 source，跳过不存在的本地路径，并且只导出 ccusage token 大于 0 的 source。也可以只看某一个：
 
 ```bash
 SOURCE=codex npm run export:data
@@ -179,6 +179,12 @@ SOURCE=openclaw npm run export:data
 
 ```bash
 SOURCES=codex,claude,openclaw npm run export:data
+```
+
+大多数机器本来就不会有所有 source 的目录。导出脚本也会跳过那些目录存在但 ccusage 报告为 0 token 的 source，避免把“安装过”误判成“有用量”。如果某个 report 卡住，可以缩短单个 report 的超时时间：
+
+```bash
+CCUSAGE_REPORT_TIMEOUT_SECONDS=45 npm run export:data
 ```
 
 ## 这个项目是怎么写的

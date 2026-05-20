@@ -72,5 +72,3 @@ export interface UsageData {
   sessions?: SessionEntry[];
   totals?: UsageTotals;
 }
-
-export type CodexData = UsageData;

@@ -32,21 +32,28 @@ INLINE_JSON=$(
     const path = require('path');
     const root = '$ROOT_DIR';
     const data = {};
+    const rowsFor = (content, key) => {
+      if (Array.isArray(content[key])) return content[key];
+      if (Array.isArray(content.data) && content.type === (key === 'sessions' ? 'session' : key)) return content.data;
+      return [];
+    };
+    const totalsFor = (content) => content.totals || content.summary;
     const mergeFile = (file, source) => {
       try {
         const content = JSON.parse(fs.readFileSync(path.join(root, file), 'utf8'));
         for (const key of ['daily', 'monthly', 'sessions']) {
-          if (Array.isArray(content[key])) {
+          const rows = rowsFor(content, key);
+          if (rows.length > 0) {
             data[key] = [
               ...(data[key] || []),
-              ...content[key].map((entry) => (
+              ...rows.map((entry) => (
                 source && !entry.source && !entry.agent ? { ...entry, source } : entry
               )),
             ];
           }
         }
-        if (content.totals && !source) {
-          data.totals = content.totals;
+        if (totalsFor(content) && !source) {
+          data.totals = totalsFor(content);
         }
       } catch (e) {}
     };

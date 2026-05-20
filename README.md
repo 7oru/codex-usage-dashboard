@@ -65,7 +65,7 @@ Paste it into your portfolio, GitHub profile README, or LinkedIn featured sectio
 
 - **100% Local** — no cloud upload, no API keys required
 - **Backfill Historical Sessions** — visualize all your past Codex usage
-- **Multi-Source Overview** — aggregate Codex, Claude Code, OpenClaw, Gemini CLI, and other ccusage sources
+- **Multi-Source Overview** — aggregate any local ccusage source with non-zero usage
 - **Daily / Monthly / Session Charts** — interactive charts powered by Recharts
 - **Model Views** — top models, daily model trends, and source × model breakdowns
 - **Token Breakdown** — input / output / reasoning / cached token breakdown
@@ -77,9 +77,9 @@ Paste it into your portfolio, GitHub profile README, or LinkedIn featured sectio
 ```
 ccusage-supported local session paths
         ↓
-  ccusage --json
+  path gate + ccusage --json
         ↓
-public/data/usage-{daily,monthly,session}.json
+public/data/usage-*.json or manifest-backed public/data/sources/*.json
         ↓
    React Dashboard (local browser)
 ```
@@ -90,7 +90,7 @@ The dashboard follows ccusage source namespaces and keeps model names dynamic, s
 
 `claude`, `codex`, `opencode`, `amp`, `droid`, `codebuff`, `hermes`, `pi`, `goose`, `openclaw`, `kilo`, `kimi`, `qwen`, `copilot`, `gemini`.
 
-Each source is shown in the dashboard with its default session path or environment variable. Use the Sources tab when a source is missing from your export and you need the expected local path.
+Each source is shown in the dashboard with its default session path or environment variable. The export script first checks whether the expected local path exists, then keeps only sources whose ccusage JSON has non-zero `totalTokens`. A configured tool such as OpenClaw may be skipped when its local files do not contain ccusage-readable token usage; provider-level usage may instead appear under the provider's own source, such as Kimi.
 
 ## Project Structure
 
@@ -109,7 +109,7 @@ codex-usage-dashboard/
 │   ├── global.d.ts              # Window.__USAGE_DATA__ type declarations
 │   ├── sources.ts               # ccusage source registry
 │   ├── hooks/
-│   │   └── useCodexData.ts      # Fetch + manual upload logic with JSON validation
+│   │   └── useUsageData.ts      # Fetch + manual upload logic with JSON validation
 │   ├── components/
 │   │   ├── StatsCards.tsx       # Overview cards
 │   │   ├── DailyChart.tsx       # Daily stacked bar chart
@@ -151,12 +151,12 @@ open dist/index.html
 
 ## Manual Data Upload
 
-If you prefer not to run the export script, you can generate JSON manually:
+If you prefer not to run the export script, you can generate JSON for one source manually:
 
 ```bash
-npx ccusage@latest daily --json > public/data/usage-daily.json
-npx ccusage@latest monthly --json > public/data/usage-monthly.json
-npx ccusage@latest session --json > public/data/usage-session.json
+npx ccusage@latest codex daily --json > public/data/usage-daily.json
+npx ccusage@latest codex monthly --json > public/data/usage-monthly.json
+npx ccusage@latest codex session --json > public/data/usage-session.json
 ```
 
 Then drag and drop the JSON files directly into the dashboard UI.
@@ -165,7 +165,7 @@ Legacy `public/data/codex-*.json` files are still accepted as a compatibility fa
 
 ## Focused Source Export
 
-By default, ccusage exports every detected source. You can focus on one source:
+By default, the script probes every supported source, skips missing local paths, and exports only sources with non-zero ccusage tokens. You can focus on one source:
 
 ```bash
 SOURCE=codex npm run export:data
@@ -177,6 +177,12 @@ Or export several focused sources into a manifest-backed bundle:
 
 ```bash
 SOURCES=codex,claude,openclaw npm run export:data
+```
+
+Missing source directories are expected on most machines. The export script also skips existing directories that produce zero-token ccusage reports, so an installed tool is not counted as usage by itself. If one report hangs, set a shorter timeout:
+
+```bash
+CCUSAGE_REPORT_TIMEOUT_SECONDS=45 npm run export:data
 ```
 
 ## AI-Native Development

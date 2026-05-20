@@ -81,7 +81,7 @@ export const SUPPORTED_SOURCES: SourceConfig[] = [
   {
     namespace: 'kimi',
     label: 'Kimi',
-    defaultPaths: ['${KIMI_DATA_DIR:-~/.kimi}'],
+    defaultPaths: ['${KIMI_DATA_DIR:-~/.kimi}', '~/.kimi/sessions'],
     envVar: 'KIMI_DATA_DIR',
     focusedCommand: 'ccusage kimi daily',
   },

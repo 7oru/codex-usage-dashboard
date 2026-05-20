@@ -13,6 +13,25 @@ interface ManifestEntry {
   session?: string;
 }
 
+function coerceCcusageJson(json: Record<string, unknown>): UsageData {
+  const data: UsageData = {};
+
+  if (Array.isArray(json.daily)) data.daily = json.daily as UsageData['daily'];
+  if (Array.isArray(json.monthly)) data.monthly = json.monthly as UsageData['monthly'];
+  if (Array.isArray(json.sessions)) data.sessions = json.sessions as UsageData['sessions'];
+
+  if (Array.isArray(json.data)) {
+    if (json.type === 'daily') data.daily = json.data as UsageData['daily'];
+    if (json.type === 'monthly') data.monthly = json.data as UsageData['monthly'];
+    if (json.type === 'session') data.sessions = json.data as UsageData['sessions'];
+  }
+
+  if (isRecord(json.totals)) data.totals = json.totals as UsageData['totals'];
+  if (isRecord(json.summary)) data.totals = json.summary as UsageData['totals'];
+
+  return data;
+}
+
 function appendArray<T>(target: T[] | undefined, value: T[]): T[] {
   return [...(target ?? []), ...value];
 }
@@ -20,7 +39,7 @@ function appendArray<T>(target: T[] | undefined, value: T[]): T[] {
 function mergeUsageJson(target: UsageData, json: unknown, fallbackSource?: string): boolean {
   if (!isRecord(json)) return false;
 
-  const normalized = normalizeUsageData(json as UsageData, fallbackSource);
+  const normalized = normalizeUsageData(coerceCcusageJson(json), fallbackSource);
   let foundUsageData = false;
   if (Array.isArray(normalized.daily)) {
     target.daily = appendArray(target.daily, normalized.daily);
@@ -34,8 +53,8 @@ function mergeUsageJson(target: UsageData, json: unknown, fallbackSource?: strin
     target.sessions = appendArray(target.sessions, normalized.sessions);
     foundUsageData = true;
   }
-  if (isRecord(json.totals) && !fallbackSource) {
-    target.totals = json.totals as UsageData['totals'];
+  if (normalized.totals && !fallbackSource) {
+    target.totals = normalized.totals;
   }
 
   return foundUsageData;
@@ -45,7 +64,7 @@ function hasUsageData(data: UsageData): boolean {
   return Boolean(data.daily || data.monthly || data.sessions);
 }
 
-export function useCodexData() {
+export function useUsageData() {
   const [data, setData] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -105,7 +124,7 @@ export function useCodexData() {
     let cancelled = false;
     setLoading(true);
 
-    const inline = (typeof window !== 'undefined' && (window.__USAGE_DATA__ ?? window.__CODEX_DATA__)) || null;
+    const inline = (typeof window !== 'undefined' && window.__USAGE_DATA__) || null;
     if (inline) {
       const merged: UsageData = {};
       mergeUsageJson(merged, inline);
