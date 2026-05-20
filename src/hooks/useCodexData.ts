@@ -1,39 +1,52 @@
 import { useState, useEffect, useCallback } from 'react';
-import type { CodexData } from '../types';
+import type { UsageData } from '../types';
+import { normalizeUsageData } from '../utils/usage';
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-function mergeUsageJson(target: CodexData, json: unknown): boolean {
+interface ManifestEntry {
+  source?: string;
+  daily?: string;
+  monthly?: string;
+  session?: string;
+}
+
+function appendArray<T>(target: T[] | undefined, value: T[]): T[] {
+  return [...(target ?? []), ...value];
+}
+
+function mergeUsageJson(target: UsageData, json: unknown, fallbackSource?: string): boolean {
   if (!isRecord(json)) return false;
 
+  const normalized = normalizeUsageData(json as UsageData, fallbackSource);
   let foundUsageData = false;
-  if (Array.isArray(json.daily)) {
-    target.daily = json.daily as CodexData['daily'];
+  if (Array.isArray(normalized.daily)) {
+    target.daily = appendArray(target.daily, normalized.daily);
     foundUsageData = true;
   }
-  if (Array.isArray(json.monthly)) {
-    target.monthly = json.monthly as CodexData['monthly'];
+  if (Array.isArray(normalized.monthly)) {
+    target.monthly = appendArray(target.monthly, normalized.monthly);
     foundUsageData = true;
   }
-  if (Array.isArray(json.sessions)) {
-    target.sessions = json.sessions as CodexData['sessions'];
+  if (Array.isArray(normalized.sessions)) {
+    target.sessions = appendArray(target.sessions, normalized.sessions);
     foundUsageData = true;
   }
-  if (isRecord(json.totals)) {
-    target.totals = json.totals as CodexData['totals'];
+  if (isRecord(json.totals) && !fallbackSource) {
+    target.totals = json.totals as UsageData['totals'];
   }
 
   return foundUsageData;
 }
 
-function hasUsageData(data: CodexData): boolean {
+function hasUsageData(data: UsageData): boolean {
   return Boolean(data.daily || data.monthly || data.sessions);
 }
 
 export function useCodexData() {
-  const [data, setData] = useState<CodexData | null>(null);
+  const [data, setData] = useState<UsageData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -43,20 +56,65 @@ export function useCodexData() {
     return res.json();
   }, []);
 
+  const loadBundleFromUrls = useCallback(async (urls: { daily: string; monthly: string; session: string }, fallbackSource?: string) => {
+    const results = await Promise.allSettled([
+      loadFromUrl(urls.daily),
+      loadFromUrl(urls.monthly),
+      loadFromUrl(urls.session),
+    ]);
+    const merged: UsageData = {};
+    results.forEach((result) => {
+      if (result.status === 'fulfilled') mergeUsageJson(merged, result.value, fallbackSource);
+    });
+    return merged;
+  }, [loadFromUrl]);
+
+  const loadManifest = useCallback(async () => {
+    const manifest = await loadFromUrl('./data/manifest.json');
+    if (!isRecord(manifest) || !Array.isArray(manifest.sources)) return {};
+
+    const sourceResults = await Promise.allSettled(
+      (manifest.sources as ManifestEntry[]).map(async (entry) => {
+        const source = entry.source;
+        const urls = {
+          daily: entry.daily ?? '',
+          monthly: entry.monthly ?? '',
+          session: entry.session ?? '',
+        };
+        const merged: UsageData = {};
+        const results = await Promise.allSettled(
+          Object.values(urls)
+            .filter(Boolean)
+            .map((url) => loadFromUrl(url.startsWith('./') ? url : `./data/${url}`))
+        );
+        results.forEach((result) => {
+          if (result.status === 'fulfilled') mergeUsageJson(merged, result.value, source);
+        });
+        return merged;
+      })
+    );
+
+    const merged: UsageData = {};
+    sourceResults.forEach((result) => {
+      if (result.status === 'fulfilled') mergeUsageJson(merged, result.value);
+    });
+    return merged;
+  }, [loadFromUrl]);
+
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
 
-    const inline = (typeof window !== 'undefined' && window.__CODEX_DATA__) || null;
+    const inline = (typeof window !== 'undefined' && (window.__USAGE_DATA__ ?? window.__CODEX_DATA__)) || null;
     if (inline) {
-      const merged: CodexData = {};
+      const merged: UsageData = {};
       mergeUsageJson(merged, inline);
       if (!cancelled) {
         if (hasUsageData(merged)) {
           setData(merged);
           setError(null);
         } else {
-          setError('No Codex usage data found. Run `npm run export:data` before building, or upload JSON manually.');
+          setError('No ccusage data found. Run `npm run export:data` before building, or upload JSON manually.');
         }
         setLoading(false);
       }
@@ -64,26 +122,34 @@ export function useCodexData() {
     }
 
     Promise.allSettled([
-      loadFromUrl('./data/codex-daily.json'),
-      loadFromUrl('./data/codex-monthly.json'),
-      loadFromUrl('./data/codex-session.json'),
-    ]).then(([dailyRes, monthlyRes, sessionRes]) => {
+      loadBundleFromUrls({
+        daily: './data/usage-daily.json',
+        monthly: './data/usage-monthly.json',
+        session: './data/usage-session.json',
+      }),
+      loadManifest(),
+      loadBundleFromUrls({
+        daily: './data/codex-daily.json',
+        monthly: './data/codex-monthly.json',
+        session: './data/codex-session.json',
+      }, 'codex'),
+    ]).then(([usageRes, manifestRes, legacyRes]) => {
       if (cancelled) return;
-      const merged: CodexData = {};
-      if (dailyRes.status === 'fulfilled') mergeUsageJson(merged, dailyRes.value);
-      if (monthlyRes.status === 'fulfilled') mergeUsageJson(merged, monthlyRes.value);
-      if (sessionRes.status === 'fulfilled') mergeUsageJson(merged, sessionRes.value);
+      const merged: UsageData = {};
+      if (usageRes.status === 'fulfilled') mergeUsageJson(merged, usageRes.value);
+      if (manifestRes.status === 'fulfilled') mergeUsageJson(merged, manifestRes.value);
+      if (!hasUsageData(merged) && legacyRes.status === 'fulfilled') mergeUsageJson(merged, legacyRes.value);
       if (hasUsageData(merged)) {
         setData(merged);
         setError(null);
       } else {
-        setError('No Codex usage data found. Run `npm run export:data` first, or upload JSON manually.');
+        setError('No ccusage data found. Run `npm run export:data` first, or upload JSON manually.');
       }
       setLoading(false);
     });
 
     return () => { cancelled = true; };
-  }, [loadFromUrl]);
+  }, [loadBundleFromUrls, loadManifest]);
 
   const uploadData = useCallback((file: File) => {
     const reader = new FileReader();
@@ -93,7 +159,7 @@ export function useCodexData() {
         if (!isRecord(json)) {
           throw new Error('Invalid JSON structure');
         }
-        const merged: CodexData = { ...data };
+        const merged: UsageData = { ...data };
         if (!mergeUsageJson(merged, json)) {
           throw new Error('No recognized usage data');
         }

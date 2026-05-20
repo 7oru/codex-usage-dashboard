@@ -23,7 +23,7 @@ rm "$ROOT_DIR/src/main.nocss.tsx"
 
 echo "[build] Copying public assets..."
 cp "$ROOT_DIR/public/favicon.svg" "$ROOT_DIR/dist/favicon.svg"
-rm -f "$ROOT_DIR/dist/data"/codex-*.json
+rm -f "$ROOT_DIR/dist/data"/codex-*.json "$ROOT_DIR/dist/data"/usage-*.json 2>/dev/null || true
 
 echo "[build] Inline JSON data..."
 INLINE_JSON=$(
@@ -32,20 +32,50 @@ INLINE_JSON=$(
     const path = require('path');
     const root = '$ROOT_DIR';
     const data = {};
-    const files = [
-      { file: 'public/data/codex-daily.json', key: 'daily', extract: 'daily' },
-      { file: 'public/data/codex-monthly.json', key: 'monthly', extract: 'monthly' },
-      { file: 'public/data/codex-monthly.json', key: 'totals', extract: 'totals' },
-      { file: 'public/data/codex-session.json', key: 'sessions', extract: 'sessions' },
-    ];
-    for (const f of files) {
+    const mergeFile = (file, source) => {
       try {
-        const content = JSON.parse(fs.readFileSync(path.join(root, f.file), 'utf8'));
-        if (content[f.extract] !== undefined) {
-          data[f.key] = content[f.extract];
+        const content = JSON.parse(fs.readFileSync(path.join(root, file), 'utf8'));
+        for (const key of ['daily', 'monthly', 'sessions']) {
+          if (Array.isArray(content[key])) {
+            data[key] = [
+              ...(data[key] || []),
+              ...content[key].map((entry) => (
+                source && !entry.source && !entry.agent ? { ...entry, source } : entry
+              )),
+            ];
+          }
+        }
+        if (content.totals && !source) {
+          data.totals = content.totals;
         }
       } catch (e) {}
+    };
+
+    const hasUsageFiles = fs.existsSync(path.join(root, 'public/data/usage-daily.json')) ||
+      fs.existsSync(path.join(root, 'public/data/usage-monthly.json')) ||
+      fs.existsSync(path.join(root, 'public/data/usage-session.json'));
+
+    if (hasUsageFiles) {
+      mergeFile('public/data/usage-daily.json');
+      mergeFile('public/data/usage-monthly.json');
+      mergeFile('public/data/usage-session.json');
     }
+
+    try {
+      const manifest = JSON.parse(fs.readFileSync(path.join(root, 'public/data/manifest.json'), 'utf8'));
+      for (const entry of manifest.sources || []) {
+        if (entry.daily) mergeFile(path.join('public/data', entry.daily), entry.source);
+        if (entry.monthly) mergeFile(path.join('public/data', entry.monthly), entry.source);
+        if (entry.session) mergeFile(path.join('public/data', entry.session), entry.source);
+      }
+    } catch (e) {}
+
+    if (!data.daily && !data.monthly && !data.sessions) {
+      mergeFile('public/data/codex-daily.json', 'codex');
+      mergeFile('public/data/codex-monthly.json', 'codex');
+      mergeFile('public/data/codex-session.json', 'codex');
+    }
+
     const safe = JSON.stringify(data).replace(/<\/script>/gi, '<\\/script>');
     console.log(safe);
   "
@@ -59,12 +89,12 @@ cat > "$ROOT_DIR/dist/index.html" <<EOF
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Codex Local Usage Dashboard</title>
+    <title>Local AI Usage Dashboard</title>
     <link rel="stylesheet" href="./assets/index.css" />
   </head>
   <body>
     <div id="root"></div>
-    <script>window.__CODEX_DATA__ = ${INLINE_JSON};</script>
+    <script>window.__USAGE_DATA__ = ${INLINE_JSON};</script>
     <script src="./assets/index.js"></script>
   </body>
 </html>

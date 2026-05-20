@@ -1,7 +1,8 @@
-import type { CodexData } from './types';
+import type { UsageData } from './types';
 
 declare global {
   interface Window {
-    __CODEX_DATA__?: CodexData;
+    __USAGE_DATA__?: UsageData;
+    __CODEX_DATA__?: UsageData;
   }
 }

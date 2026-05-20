@@ -1,3 +1,11 @@
+export interface SourceConfig {
+  namespace: string;
+  label: string;
+  defaultPaths: string[];
+  envVar: string;
+  focusedCommand: string;
+}
+
 export interface ModelUsage {
   inputTokens: number;
   cachedInputTokens: number;
@@ -9,6 +17,8 @@ export interface ModelUsage {
 
 export interface DailyEntry {
   date: string;
+  source?: string;
+  agent?: string;
   inputTokens: number;
   cachedInputTokens: number;
   outputTokens: number;
@@ -20,6 +30,8 @@ export interface DailyEntry {
 
 export interface MonthlyEntry {
   month: string;
+  source?: string;
+  agent?: string;
   inputTokens: number;
   cachedInputTokens: number;
   outputTokens: number;
@@ -34,6 +46,8 @@ export interface SessionEntry {
   lastActivity: string;
   sessionFile: string;
   directory: string;
+  source?: string;
+  agent?: string;
   inputTokens: number;
   cachedInputTokens: number;
   outputTokens: number;
@@ -43,16 +57,20 @@ export interface SessionEntry {
   models: Record<string, ModelUsage>;
 }
 
-export interface CodexData {
+export interface UsageTotals {
+  inputTokens: number;
+  cachedInputTokens: number;
+  outputTokens: number;
+  reasoningOutputTokens: number;
+  totalTokens: number;
+  costUSD: number;
+}
+
+export interface UsageData {
   daily?: DailyEntry[];
   monthly?: MonthlyEntry[];
   sessions?: SessionEntry[];
-  totals?: {
-    inputTokens: number;
-    cachedInputTokens: number;
-    outputTokens: number;
-    reasoningOutputTokens: number;
-    totalTokens: number;
-    costUSD: number;
-  };
+  totals?: UsageTotals;
 }
+
+export type CodexData = UsageData;
