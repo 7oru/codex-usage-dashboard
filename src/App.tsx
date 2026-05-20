@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Shield, Upload, Loader2, Database } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import { Shield, Upload, Loader2, Database, BarChart3, Boxes, LineChart } from 'lucide-react';
 import { useCodexData } from './hooks/useCodexData';
 import StatsCards from './components/StatsCards';
 import DailyChart from './components/DailyChart';
@@ -7,10 +7,17 @@ import MonthlyChart from './components/MonthlyChart';
 import TokenBreakdown from './components/TokenBreakdown';
 import SessionTable from './components/SessionTable';
 import ExportMarkdown from './components/ExportMarkdown';
+import SourceOverview from './components/SourceOverview';
+import ModelOverview from './components/ModelOverview';
+import { summarizeUsage } from './utils/usage';
+
+type ViewMode = 'overview' | 'sources' | 'models';
 
 function App() {
   const { data, loading, error, uploadData } = useCodexData();
   const [dragOver, setDragOver] = useState(false);
+  const [viewMode, setViewMode] = useState<ViewMode>('overview');
+  const summary = useMemo(() => (data ? summarizeUsage(data) : null), [data]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -22,6 +29,11 @@ function App() {
   };
 
   const hasData = data && (data.daily || data.monthly || data.sessions);
+  const tabs = [
+    { id: 'overview' as const, label: 'Overview', icon: BarChart3 },
+    { id: 'sources' as const, label: 'Sources', icon: Boxes },
+    { id: 'models' as const, label: 'Models', icon: LineChart },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -31,7 +43,7 @@ function App() {
             <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center">
               <Database size={18} className="text-white" />
             </div>
-            <h1 className="text-lg font-semibold text-slate-900">Codex Local Usage Dashboard</h1>
+            <h1 className="text-lg font-semibold text-slate-900">Local AI Usage Dashboard</h1>
           </div>
           <div className="flex items-center gap-2 text-xs font-medium text-emerald-700 bg-emerald-50 px-3 py-1.5 rounded-full">
             <Shield size={14} />
@@ -61,7 +73,7 @@ function App() {
             <h3 className="text-slate-800 font-medium mb-1">No usage data found</h3>
             <p className="text-slate-500 text-sm mb-4">{error}</p>
             <div className="text-xs text-slate-400 mb-4">
-              Or drop a JSON file here (daily.json / session.json / monthly.json)
+              Or drop a ccusage JSON file here (daily.json / session.json / monthly.json)
             </div>
             <label className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-900 text-white text-sm font-medium hover:bg-slate-800 transition-colors cursor-pointer">
               <Upload size={14} />
@@ -83,12 +95,42 @@ function App() {
           <>
             <StatsCards data={data} />
 
-            <div className="grid grid-cols-1 gap-6 mb-8">
-              {data.daily && data.daily.length > 0 && <DailyChart daily={data.daily} />}
-              {data.monthly && data.monthly.length > 0 && <MonthlyChart monthly={data.monthly} />}
+            <div className="flex flex-wrap items-center gap-2 mb-6">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setViewMode(tab.id)}
+                  className={`inline-flex items-center gap-2 h-10 px-4 rounded-lg text-sm font-medium border transition-colors ${
+                    viewMode === tab.id
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  <tab.icon size={16} />
+                  {tab.label}
+                </button>
+              ))}
+              {summary && (
+                <div className="ml-auto text-xs text-slate-500">
+                  {summary.activeSources.length} sources · {summary.activeModels.length} models
+                </div>
+              )}
             </div>
 
-            <TokenBreakdown data={data} />
+            {viewMode === 'overview' && (
+              <>
+                <div className="grid grid-cols-1 gap-6 mb-8">
+                  {data.daily && data.daily.length > 0 && <DailyChart daily={data.daily} />}
+                  {data.monthly && data.monthly.length > 0 && <MonthlyChart monthly={data.monthly} />}
+                </div>
+
+                <TokenBreakdown data={data} />
+              </>
+            )}
+
+            {viewMode === 'sources' && <SourceOverview data={data} />}
+
+            {viewMode === 'models' && <ModelOverview data={data} />}
 
             {data.sessions && data.sessions.length > 0 && (
               <SessionTable sessions={data.sessions} />
@@ -101,7 +143,7 @@ function App() {
               <div>
                 <h4 className="text-sm font-medium text-slate-800">Privacy First</h4>
                 <p className="text-xs text-slate-500 mt-1">
-                  This tool only reads local Codex session logs. It does not upload prompts,
+                  This tool only reads local ccusage-supported session logs. It does not upload prompts,
                   responses, code, or usage data anywhere. All processing happens in your browser.
                 </p>
               </div>
@@ -112,7 +154,7 @@ function App() {
 
       <footer className="border-t border-slate-200 bg-white mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between text-xs text-slate-400">
-          <span>Codex Local Usage Dashboard</span>
+          <span>Local AI Usage Dashboard</span>
           <span>Data never leaves your machine</span>
         </div>
       </footer>

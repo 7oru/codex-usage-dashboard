@@ -7,13 +7,15 @@ import {
   Trophy,
   Layers,
 } from 'lucide-react';
-import type { CodexData } from '../types';
+import type { UsageData } from '../types';
 import dayjs from 'dayjs';
 import { formatTokens, formatUSD } from '../utils/format';
+import { summarizeUsage } from '../utils/usage';
 
-export default function StatsCards({ data }: { data: CodexData }) {
+export default function StatsCards({ data }: { data: UsageData }) {
   const stats = useMemo(() => {
-    const totals = data.totals;
+    const summary = summarizeUsage(data);
+    const totals = summary.totals;
     const daily = data.daily ?? [];
     const sessions = data.sessions ?? [];
 
@@ -33,23 +35,9 @@ export default function StatsCards({ data }: { data: CodexData }) {
     const monthTokens = effectiveMonth?.totalTokens ?? 0;
 
     let longestSessionTokens = 0;
-    let mostUsedModel = '-';
-    let modelMax = 0;
-    const modelCounts: Record<string, number> = {};
-
     sessions.forEach((s) => {
       if (s.totalTokens > longestSessionTokens) {
         longestSessionTokens = s.totalTokens;
-      }
-      Object.entries(s.models).forEach(([name, m]) => {
-        modelCounts[name] = (modelCounts[name] ?? 0) + m.totalTokens;
-      });
-    });
-
-    Object.entries(modelCounts).forEach(([name, count]) => {
-      if (count > modelMax) {
-        modelMax = count;
-        mostUsedModel = name;
       }
     });
 
@@ -59,7 +47,7 @@ export default function StatsCards({ data }: { data: CodexData }) {
       todayTokens,
       monthTokens,
       longestSessionTokens,
-      mostUsedModel,
+      mostUsedModel: summary.modelTotals[0]?.name ?? '-',
     };
   }, [data]);
 

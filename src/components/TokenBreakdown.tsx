@@ -7,33 +7,26 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
-import type { CodexData } from '../types';
+import type { UsageData } from '../types';
 import { formatTokens } from '../utils/format';
+import { summarizeUsage } from '../utils/usage';
 
 const COLORS = ['#3b82f6', '#60a5fa', '#10b981', '#8b5cf6', '#f59e0b', '#f43f5e'];
 
-export default function TokenBreakdown({ data }: { data: CodexData }) {
+export default function TokenBreakdown({ data }: { data: UsageData }) {
   const { pieData, modelData } = useMemo(() => {
-    const totals = data.totals;
-    const pie = totals
-      ? [
-          { name: 'Input', value: totals.inputTokens },
-          { name: 'Cached Input', value: totals.cachedInputTokens },
-          { name: 'Output', value: totals.outputTokens },
-          { name: 'Reasoning', value: totals.reasoningOutputTokens },
-        ].filter((d) => d.value > 0)
-      : [];
+    const summary = summarizeUsage(data);
+    const totals = summary.totals;
+    const pie = [
+      { name: 'Input', value: totals.inputTokens },
+      { name: 'Cached Input', value: totals.cachedInputTokens },
+      { name: 'Output', value: totals.outputTokens },
+      { name: 'Reasoning', value: totals.reasoningOutputTokens },
+    ].filter((d) => d.value > 0);
 
-    const modelMap: Record<string, number> = {};
-    data.sessions?.forEach((s) => {
-      Object.entries(s.models).forEach(([name, m]) => {
-        modelMap[name] = (modelMap[name] ?? 0) + m.totalTokens;
-      });
-    });
-
-    const models = Object.entries(modelMap)
-      .map(([name, value]) => ({ name, value }))
-      .sort((a, b) => b.value - a.value);
+    const models = summary.modelTotals
+      .slice(0, 8)
+      .map((model) => ({ name: model.name, value: model.totalTokens }));
 
     return { pieData: pie, modelData: models };
   }, [data]);
