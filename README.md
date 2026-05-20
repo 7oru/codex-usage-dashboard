@@ -19,8 +19,8 @@ This dashboard reads local session logs through `ccusage`, crunches the numbers,
 ## Quick Start
 
 ```bash
-git clone https://github.com/7oru/codex-usage-dashboard.git
-cd codex-usage-dashboard
+git clone https://github.com/7oru/local-ai-usage-dashboard.git
+cd local-ai-usage-dashboard
 npm install
 npm run export:data   # Scans local ccusage sources with non-zero usage
 npm run dev           # http://localhost:5173
@@ -35,14 +35,14 @@ open dist/index.html
 
 To generate a publish-safe demo with synthetic data:
 
-[Open the included sample HTML](dist-sample/index.html), or rebuild it locally:
+[Open the online sample dashboard](https://7oru.github.io/local-ai-usage-dashboard/dist-sample/), or rebuild it locally:
 
 ```bash
 npm run build:sample
 open dist-sample/index.html
 ```
 
-The sample build uses `sample-data/usage.json`, which contains fake sources, sessions, token counts, and costs only. GitHub may show the HTML source instead of rendering it; cloning the repo and opening the file locally renders the dashboard.
+The sample build uses `sample-data/usage.json`, which contains fake sources, sessions, token counts, and costs only. GitHub repository file views may show the HTML source instead of rendering it; use the GitHub Pages sample above or clone the repo and open the file locally.
 
 ## Portfolio Export Example
 
@@ -106,7 +106,7 @@ Each source is shown in the dashboard with its default session path or environme
 ## Project Structure
 
 ```
-codex-usage-dashboard/
+local-ai-usage-dashboard/
 ├── scripts/
 │   ├── export-ccusage-json.sh   # Export ccusage JSON to public/data/
 │   └── build.sh                 # Local static build (esbuild + tailwindcss)
