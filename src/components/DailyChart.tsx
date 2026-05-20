@@ -15,14 +15,34 @@ import { formatTokens } from '../utils/format';
 
 export default function DailyChart({ daily }: { daily: DailyEntry[] }) {
   const data = useMemo(() => {
-    return [...daily]
+    const byDate = new Map<string, {
+      date: string;
+      input: number;
+      cached: number;
+      output: number;
+      reasoning: number;
+    }>();
+
+    daily.forEach((d) => {
+      const row = byDate.get(d.date) ?? {
+        date: d.date,
+        input: 0,
+        cached: 0,
+        output: 0,
+        reasoning: 0,
+      };
+      row.input += d.inputTokens;
+      row.cached += d.cachedInputTokens;
+      row.output += d.outputTokens;
+      row.reasoning += d.reasoningOutputTokens;
+      byDate.set(d.date, row);
+    });
+
+    return [...byDate.values()]
       .sort((a, b) => a.date.localeCompare(b.date))
       .map((d) => ({
-        date: dayjs(d.date).format('MM-DD'),
-        input: d.inputTokens,
-        cached: d.cachedInputTokens,
-        output: d.outputTokens,
-        reasoning: d.reasoningOutputTokens,
+        ...d,
+        date: dayjs(d.date).isValid() ? dayjs(d.date).format('MM-DD') : d.date,
       }));
   }, [daily]);
 

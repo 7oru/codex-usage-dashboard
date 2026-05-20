@@ -22,7 +22,7 @@ This dashboard reads local session logs through `ccusage`, crunches the numbers,
 git clone https://github.com/7oru/codex-usage-dashboard.git
 cd codex-usage-dashboard
 npm install
-npm run export:data   # Scans all ccusage-supported sources it can detect
+npm run export:data   # Scans local ccusage sources with non-zero usage
 npm run dev           # http://localhost:5173
 ```
 
@@ -64,7 +64,7 @@ Paste it into your portfolio, GitHub profile README, or LinkedIn featured sectio
 ## Features
 
 - **100% Local** — no cloud upload, no API keys required
-- **Backfill Historical Sessions** — visualize all your past Codex usage
+- **Backfill Historical Sessions** — visualize all your past local AI coding usage
 - **Multi-Source Overview** — aggregate any local ccusage source with non-zero usage
 - **Daily / Monthly / Session Charts** — interactive charts powered by Recharts
 - **Model Views** — top models, daily model trends, and source × model breakdowns
@@ -121,6 +121,7 @@ codex-usage-dashboard/
 │   │   └── ExportMarkdown.tsx   # Portfolio markdown export
 │   └── utils/
 │       ├── format.ts            # Shared number formatting helpers
+│       ├── modelColors.ts       # Shared model color palette
 │       └── usage.ts             # Usage aggregation helpers
 ├── package.json
 ├── tailwind.config.js

@@ -11,8 +11,7 @@ import {
 import type { UsageData } from '../types';
 import { formatTokens, formatUSD } from '../utils/format';
 import { summarizeUsage, topNames } from '../utils/usage';
-
-const MODEL_COLORS = ['#2563eb', '#059669', '#7c3aed', '#f59e0b', '#e11d48', '#0f766e', '#9333ea', '#ea580c'];
+import { getModelColor, getModelTagStyle } from '../utils/modelColors';
 
 export default function ModelOverview({ data }: { data: UsageData }) {
   const summary = summarizeUsage(data);
@@ -57,12 +56,12 @@ export default function ModelOverview({ data }: { data: UsageData }) {
                 contentStyle={{ borderRadius: 8, border: '1px solid #e2e8f0' }}
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              {topModels.map((model, index) => (
+              {topModels.map((model) => (
                 <Bar
                   key={model}
                   dataKey={model}
                   stackId="models"
-                  fill={MODEL_COLORS[index % MODEL_COLORS.length]}
+                  fill={getModelColor(model, topModels)}
                 />
               ))}
             </BarChart>
@@ -87,7 +86,14 @@ export default function ModelOverview({ data }: { data: UsageData }) {
             <tbody className="divide-y divide-slate-100">
               {summary.sourceModelTotals.slice(0, 50).map((row) => (
                 <tr key={`${row.source}-${row.model}`}>
-                  <td className="px-4 py-3 font-medium text-slate-900">{row.model}</td>
+                  <td className="px-4 py-3 font-medium text-slate-900">
+                    <span
+                      className="inline-flex items-center rounded-full border px-2 py-0.5 text-xs font-medium"
+                      style={getModelTagStyle(row.model, topModels)}
+                    >
+                      {row.model}
+                    </span>
+                  </td>
                   <td className="px-4 py-3 text-slate-600">{row.sourceLabel}</td>
                   <td className="px-4 py-3">{formatTokens(row.totalTokens)}</td>
                   <td className="px-4 py-3">{formatUSD(row.costUSD)}</td>

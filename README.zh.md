@@ -24,7 +24,7 @@
 git clone https://github.com/7oru/codex-usage-dashboard.git
 cd codex-usage-dashboard
 npm install
-npm run export:data   # 扫描所有 ccusage 能检测到的 source
+npm run export:data   # 扫描本机所有非零用量的 ccusage source
 npm run dev           # http://localhost:5173
 ```
 
@@ -123,6 +123,7 @@ codex-usage-dashboard/
 │   │   └── ExportMarkdown.tsx   # Markdown 报告导出
 │   └── utils/
 │       ├── format.ts            # 共享数字格式化
+│       ├── modelColors.ts       # 共享模型配色
 │       └── usage.ts             # 用量聚合工具
 ├── package.json
 ├── tailwind.config.js

@@ -65,6 +65,111 @@ json_has_usage() {
   " "$file" "$report"
 }
 
+enrich_exported_json() {
+  local file="$1"
+  local source="$2"
+  local report="$3"
+
+  node -e "
+    const fs = require('fs');
+    const path = require('path');
+    const os = require('os');
+    const file = process.argv[1];
+    const source = process.argv[2];
+    const report = process.argv[3];
+    const json = JSON.parse(fs.readFileSync(file, 'utf8'));
+
+    function readKimiModelAliases(root) {
+      const aliases = {};
+      try {
+        const config = fs.readFileSync(path.join(root, 'config.toml'), 'utf8');
+        const blocks = config.matchAll(/\\[models\\.\"([^\"]+)\"\\]([\\s\\S]*?)(?=\\n\\[|$)/g);
+        for (const match of blocks) {
+          const fullName = match[1];
+          const body = match[2];
+          const model = body.match(/\\nmodel\\s*=\\s*\"([^\"]+)\"/)?.[1];
+          const displayName = body.match(/\\ndisplay_name\\s*=\\s*\"([^\"]+)\"/)?.[1];
+          if (!displayName) continue;
+          aliases[fullName] = displayName;
+          if (model) aliases[model] = displayName;
+        }
+      } catch {}
+      return aliases;
+    }
+
+    function mapModels(rows, aliases) {
+      for (const row of rows) {
+        if (Array.isArray(row.modelsUsed)) {
+          row.modelsUsed = row.modelsUsed.map((model) => aliases[model] || model);
+        }
+      }
+    }
+
+    function findSessionDir(root, sessionId) {
+      const stack = [path.join(root, 'sessions')];
+      while (stack.length > 0) {
+        const current = stack.pop();
+        let entries = [];
+        try {
+          entries = fs.readdirSync(current, { withFileTypes: true });
+        } catch {
+          continue;
+        }
+        for (const entry of entries) {
+          if (!entry.isDirectory()) continue;
+          const fullPath = path.join(current, entry.name);
+          if (entry.name === sessionId) return fullPath;
+          stack.push(fullPath);
+        }
+      }
+      return null;
+    }
+
+    function lastWireTimestamp(sessionDir) {
+      const wirePath = path.join(sessionDir, 'wire.jsonl');
+      try {
+        const lines = fs.readFileSync(wirePath, 'utf8').trim().split('\\n').reverse();
+        for (const line of lines) {
+          const timestamp = JSON.parse(line).timestamp;
+          if (typeof timestamp === 'number' && Number.isFinite(timestamp)) {
+            return new Date(timestamp * 1000).toISOString();
+          }
+        }
+      } catch {}
+
+      try {
+        return fs.statSync(wirePath).mtime.toISOString();
+      } catch {
+        return '';
+      }
+    }
+
+    if (source === 'kimi') {
+      const root = process.env.KIMI_DATA_DIR || path.join(os.homedir(), '.kimi');
+      const aliases = readKimiModelAliases(root);
+      const rows = Array.isArray(json[report === 'session' ? 'sessions' : report])
+        ? json[report === 'session' ? 'sessions' : report]
+        : Array.isArray(json.data)
+          ? json.data
+          : [];
+      mapModels(rows, aliases);
+
+      if (report === 'session') {
+        for (const row of rows) {
+          if (!row.sessionId) continue;
+          const sessionDir = findSessionDir(root, row.sessionId);
+          if (!sessionDir) continue;
+          row.lastActivity = row.lastActivity || lastWireTimestamp(sessionDir);
+          row.directory = row.directory || sessionDir;
+          row.sessionFile = row.sessionFile || row.sessionId;
+        }
+      }
+    }
+
+    fs.writeFileSync(file, JSON.stringify(json, null, 2) + '\\n');
+  " "$file" "$source" "$report"
+}
+
 source_has_local_data() {
   local source="$1"
 
@@ -153,6 +258,7 @@ run_ccusage_export() {
       rm -f "$tmp_file" "$output_file"
       return 1
     fi
+    enrich_exported_json "$tmp_file" "$source" "$report"
     mv "$tmp_file" "$output_file"
     return 0
   fi

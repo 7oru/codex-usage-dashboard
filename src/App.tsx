@@ -133,7 +133,10 @@ function App() {
             {viewMode === 'models' && <ModelOverview data={data} />}
 
             {data.sessions && data.sessions.length > 0 && (
-              <SessionTable sessions={data.sessions} />
+              <SessionTable
+                sessions={data.sessions}
+                modelOrder={summary?.modelTotals.map((model) => model.name)}
+              />
             )}
 
             <ExportMarkdown data={data} />
