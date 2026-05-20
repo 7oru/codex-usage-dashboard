@@ -34,6 +34,8 @@ const TOKEN_KEYS = [
   'costUSD',
 ] as const;
 
+const COST_KEYS = ['costUSD', 'totalCost', 'totalCostUSD'] as const;
+
 function emptyTotals(): UsageTotals {
   return {
     inputTokens: 0,
@@ -47,6 +49,14 @@ function emptyTotals(): UsageTotals {
 
 function toNumber(value: unknown): number {
   return typeof value === 'number' && Number.isFinite(value) ? value : 0;
+}
+
+function hasCostField(entry: Record<string, unknown>): boolean {
+  return COST_KEYS.some((key) => typeof entry[key] === 'number' && Number.isFinite(entry[key]));
+}
+
+function getCost(entry: Record<string, unknown>): number {
+  return COST_KEYS.reduce((cost, key) => cost || toNumber(entry[key]), 0);
 }
 
 function normalizeTotals(entry: Record<string, unknown>): UsageTotals {
@@ -65,40 +75,60 @@ function normalizeTotals(entry: Record<string, unknown>): UsageTotals {
     outputTokens,
     reasoningOutputTokens,
     totalTokens: toNumber(entry.totalTokens) || inputTokens + cachedInputTokens + outputTokens + reasoningOutputTokens,
-    costUSD: toNumber(entry.costUSD) || toNumber(entry.totalCost) || toNumber(entry.totalCostUSD),
+    costUSD: getCost(entry),
   };
 }
 
+function withDistributedMissingModelCost(
+  models: Array<{ name: string; usage: ModelUsage; hasCost: boolean }>,
+  totals: UsageTotals
+): Record<string, ModelUsage> {
+  const missingCostModels = models.filter((model) => !model.hasCost);
+  if (totals.costUSD > 0 && missingCostModels.length > 0) {
+    const knownCost = models
+      .filter((model) => model.hasCost)
+      .reduce((sum, model) => sum + model.usage.costUSD, 0);
+    const remainingCost = Math.max(0, totals.costUSD - knownCost);
+    const missingTokens = missingCostModels.reduce((sum, model) => sum + model.usage.totalTokens, 0);
+
+    missingCostModels.forEach((model) => {
+      model.usage.costUSD = missingTokens > 0
+        ? remainingCost * (model.usage.totalTokens / missingTokens)
+        : remainingCost / missingCostModels.length;
+    });
+  }
+
+  return Object.fromEntries(models.map((model) => [model.name, model.usage]));
+}
+
+function normalizeModelObject(
+  models: Record<string, unknown>,
+  totals: UsageTotals
+): Record<string, ModelUsage> {
+  return withDistributedMissingModelCost(
+    Object.entries(models).map(([name, model]) => {
+      const modelRecord = typeof model === 'object' && model !== null ? model as Record<string, unknown> : {};
+      return {
+        name,
+        hasCost: hasCostField(modelRecord),
+        usage: {
+          ...normalizeTotals(modelRecord),
+          isFallback: Boolean(modelRecord.isFallback),
+        },
+      };
+    }),
+    totals
+  );
+}
+
 function normalizeModels(entry: Record<string, unknown>, totals: UsageTotals): Record<string, ModelUsage> {
-  const breakdown = entry.breakdown ?? entry.models;
+  const breakdown = entry.breakdown;
   if (breakdown && typeof breakdown === 'object' && !Array.isArray(breakdown)) {
-    return Object.fromEntries(
-      Object.entries(breakdown as Record<string, Record<string, unknown>>).map(([name, model]) => {
-        const modelTotals = normalizeTotals(model);
-        return [
-          name,
-          {
-            ...modelTotals,
-            isFallback: Boolean(model.isFallback),
-          },
-        ];
-      })
-    );
+    return normalizeModelObject(breakdown as Record<string, unknown>, totals);
   }
 
   if (entry.models && typeof entry.models === 'object' && !Array.isArray(entry.models)) {
-    return Object.fromEntries(
-      Object.entries(entry.models as Record<string, Record<string, unknown>>).map(([name, model]) => {
-        const modelTotals = normalizeTotals(model);
-        return [
-          name,
-          {
-            ...modelTotals,
-            isFallback: Boolean(model.isFallback),
-          },
-        ];
-      })
-    );
+    return normalizeModelObject(entry.models as Record<string, unknown>, totals);
   }
 
   if (Array.isArray(entry.modelBreakdowns)) {
@@ -107,18 +137,19 @@ function normalizeModels(entry: Record<string, unknown>, totals: UsageTotals): R
       .filter((model): model is Record<string, unknown> => Boolean(model));
 
     if (modelEntries.length > 0) {
-      return Object.fromEntries(
+      return withDistributedMissingModelCost(
         modelEntries.map((model, index) => {
           const name = String(model.model ?? model.modelName ?? model.name ?? `model-${index + 1}`);
-          const modelTotals = normalizeTotals(model);
-          return [
+          return {
             name,
-            {
-              ...modelTotals,
+            hasCost: hasCostField(model),
+            usage: {
+              ...normalizeTotals(model),
               isFallback: Boolean(model.isFallback),
             },
-          ];
-        })
+          };
+        }),
+        totals
       );
     }
   }
@@ -270,11 +301,9 @@ function aggregateModelTotals(
   sourceModelTotals: Map<string, { source: string; sourceLabel: string; model: string; totalTokens: number; costUSD: number }>
 ) {
   entries.forEach((entry) => {
-    const isSessionEntry = 'sessionId' in entry;
     Object.entries(entry.models).forEach(([modelName, modelUsage]) => {
       const modelTotal = getOrCreateTotal(modelTotals, modelName, modelName);
       addModelUsage(modelTotal, modelUsage);
-      if (isSessionEntry) modelTotal.sessions += 1;
 
       const key = `${source}::${modelName}`;
       const sourceModel = sourceModelTotals.get(key) ?? {
@@ -287,6 +316,14 @@ function aggregateModelTotals(
       sourceModel.totalTokens += modelUsage.totalTokens;
       sourceModel.costUSD += modelUsage.costUSD;
       sourceModelTotals.set(key, sourceModel);
+    });
+  });
+}
+
+function aggregateModelSessionCounts(sessions: SessionEntry[], modelTotals: Map<string, NamedTotal>) {
+  sessions.forEach((session) => {
+    Object.keys(session.models).forEach((modelName) => {
+      getOrCreateTotal(modelTotals, modelName, modelName).sessions += 1;
     });
   });
 }
@@ -311,10 +348,11 @@ export function summarizeUsage(data: UsageData): UsageSummary {
     aggregateSourceTotals(source, sourceMonthly, sourceDaily, sourceSessions, sourceTotals);
     aggregateModelTotals(
       source,
-      sourceSessions.length > 0 ? sourceSessions : sourceDaily.length > 0 ? sourceDaily : sourceMonthly,
+      sourceMonthly.length > 0 ? sourceMonthly : sourceDaily.length > 0 ? sourceDaily : sourceSessions,
       modelTotals,
       sourceModelTotals
     );
+    aggregateModelSessionCounts(sourceSessions, modelTotals);
   });
 
   daily.forEach((entry) => {

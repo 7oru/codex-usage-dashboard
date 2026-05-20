@@ -1,6 +1,6 @@
 {
   "name": "local-ai-usage-dashboard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Generate a local static dashboard from ccusage-supported AI coding usage data.",
   "license": "MIT",
   "type": "module",
