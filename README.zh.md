@@ -4,7 +4,7 @@
 
 **面试时别再空口说"我很会用 AI"了——直接把数据拍桌上。**
 
-[English](README.md) | [中文](README.zh.md)
+[English](README.md) | [中文](README.zh.md) | [在线 Sample Dashboard](https://7oru.github.io/local-ai-usage-dashboard/dist-sample/)
 
 ![Demo](assets/demo.gif)
 

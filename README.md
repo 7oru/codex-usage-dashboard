@@ -4,7 +4,7 @@
 
 **Show recruiters how much AI-assisted coding you actually did.**
 
-[English](README.md) | [中文](README.zh.md)
+[English](README.md) | [中文](README.zh.md) | [Live Sample Dashboard](https://7oru.github.io/local-ai-usage-dashboard/dist-sample/)
 
 ![Demo](assets/demo.gif)
 
@@ -35,7 +35,7 @@ open dist/index.html
 
 To generate a publish-safe demo with synthetic data:
 
-[Open the online sample dashboard](https://7oru.github.io/local-ai-usage-dashboard/dist-sample/), or rebuild it locally:
+[Open the live sample dashboard](https://7oru.github.io/local-ai-usage-dashboard/dist-sample/), or rebuild it locally:
 
 ```bash
 npm run build:sample
