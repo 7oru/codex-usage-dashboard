@@ -129,7 +129,7 @@ export default function ExportMarkdown({ data }: { data: UsageData }) {
         </button>
       </div>
       <p className="text-slate-500 text-sm mb-3">
-        Generate a clean Markdown report perfect for sharing with recruiters or documenting your AI-assisted development workflow.
+        Generate a clean Markdown report for documenting your AI-assisted development workflow.
       </p>
       <div className="bg-slate-50 rounded-lg border border-slate-200 p-4 overflow-auto max-h-64">
         <pre className="text-xs text-slate-700 font-mono whitespace-pre">{markdown}</pre>

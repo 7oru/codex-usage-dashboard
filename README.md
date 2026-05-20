@@ -2,7 +2,7 @@
 
 > Visualize local ccusage-supported AI coding sessions and export an AI-native engineering report.
 
-**Show recruiters how much AI-assisted coding you actually did.**
+**Turn your local AI-assisted coding activity into clear, shareable engineering metrics.**
 
 [English](README.md) | [中文](README.zh.md) | [Live Sample Dashboard](https://7oru.github.io/local-ai-usage-dashboard/dist-sample/)
 
@@ -10,9 +10,9 @@
 
 ## Why?
 
-Recruiters ask *"How do you use AI?"* — now you can show them the receipts.
+AI-assisted development is hard to describe from memory. This dashboard turns your local coding sessions into concrete usage trends, model breakdowns, and exportable summaries.
 
-This dashboard reads local session logs through `ccusage`, crunches the numbers, and produces charts + a downloadable Markdown report you can paste straight into your portfolio, GitHub README, or LinkedIn featured section.
+It reads local session logs through `ccusage`, crunches the numbers, and produces charts + a downloadable Markdown report you can use in project notes, portfolio pages, GitHub READMEs, or workflow retrospectives.
 
 > **Privacy First:** Everything stays local. No cloud upload, no API keys, no data leaves your machine.
 
@@ -44,9 +44,9 @@ open dist-sample/index.html
 
 The sample build uses `sample-data/usage.json`, which contains fake sources, sessions, token counts, and costs only. GitHub repository file views may show the HTML source instead of rendering it; use the GitHub Pages sample above or clone the repo and open the file locally.
 
-## Portfolio Export Example
+## Markdown Export Example
 
-Click **Download Markdown Report** inside the dashboard to generate a summary like this — real numbers from your actual sessions:
+Click **Download Markdown Report** inside the dashboard to generate a summary like this — real numbers from your own local sessions:
 
 ```markdown
 # Local AI Usage Report
@@ -70,7 +70,7 @@ Click **Download Markdown Report** inside the dashboard to generate a summary li
 | ...        | ...     | ...     | ...     | ...       | ...     | ...    |
 ```
 
-Paste it into your portfolio, GitHub profile README, or LinkedIn featured section. Let the numbers speak.
+Use it in project documentation, personal retrospectives, portfolio pages, or GitHub profile notes.
 
 ## Features
 
@@ -80,7 +80,7 @@ Paste it into your portfolio, GitHub profile README, or LinkedIn featured sectio
 - **Daily / Monthly / Session Charts** — interactive charts powered by Recharts
 - **Model Views** — top models, daily model trends, and source × model breakdowns
 - **Token Breakdown** — input / output / reasoning / cached token breakdown
-- **Export Markdown Report** — generate a clean report for recruiters or your portfolio
+- **Export Markdown Report** — generate a clean report for project notes, portfolios, or retrospectives
 - **Local Static Build** — build once, then open `dist/index.html` directly
 
 ## Data Flow

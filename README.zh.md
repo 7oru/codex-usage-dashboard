@@ -2,7 +2,7 @@
 
 > 本地可视化 ccusage 支持的 AI Coding 会话用量，一键导出 AI-Native 工程报告。
 
-**面试时别再空口说"我很会用 AI"了——直接把数据拍桌上。**
+**把本地 AI-assisted coding 活动变成清晰、可分享的工程指标。**
 
 [English](README.md) | [中文](README.zh.md) | [在线 Sample Dashboard](https://7oru.github.io/local-ai-usage-dashboard/dist-sample/)
 
@@ -10,9 +10,9 @@
 
 ## 这东西能干啥
 
-面试官问 "说说你怎么用 AI 辅助开发？"
+AI-assisted development 很难只凭记忆说清楚。
 
-以前你只能嘴上说"我经常用 AI 写代码"，现在你可以打开这个仪表盘，把 **lifetime tokens、峰值用量、最常用模型、不同工具来源** 截个图或者贴一段 Markdown 进简历。
+这个仪表盘会把本地 coding session 转成 **lifetime tokens、峰值用量、最常用模型、不同工具来源** 等可视化数据，也可以导出 Markdown，放进项目记录、作品集、GitHub README 或工作流复盘里。
 
 它通过 `ccusage` 读取本地会话日志，在浏览器里跑，不上传、不联网、不要 API Key。
 
@@ -46,9 +46,9 @@ open dist-sample/index.html
 
 sample build 使用 `sample-data/usage.json`，里面只有假的 source、session、token 和 cost。GitHub 仓库文件页可能会展示 HTML 源码而不是直接渲染；可以用上面的 GitHub Pages sample，或者 clone 后本地打开这个文件。
 
-## 面试/作品集数据示例
+## Markdown 导出示例
 
-点仪表盘里的 **Download Markdown Report**，自动生成下面这种报告。复制粘贴到 GitHub Profile README、作品集网站或者牛客/知乎帖子都行：
+点仪表盘里的 **Download Markdown Report**，自动生成下面这种报告。可以放进 GitHub Profile README、项目文档、作品集网站或者个人复盘里：
 
 ```markdown
 # Local AI Usage Report
@@ -72,7 +72,7 @@ sample build 使用 `sample-data/usage.json`，里面只有假的 source、sessi
 | ...        | ...     | ...     | ...     | ...       | ...     | ...    |
 ```
 
-**效果**：别人还在写 "熟练使用 AI 编程"，你的简历里直接印着 346.9M tokens。
+这类报告适合用来记录自己的 AI-assisted development 节奏，而不是只留下一句笼统描述。
 
 ## 功能一览
 
