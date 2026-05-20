@@ -67,7 +67,7 @@ export const SUPPORTED_SOURCES: SourceConfig[] = [
   {
     namespace: 'openclaw',
     label: 'OpenClaw',
-    defaultPaths: ['${OPENCLAW_DIR:-~/.openclaw}'],
+    defaultPaths: ['${OPENCLAW_DIR:-~/.openclaw}', '~/.clawdbot', '~/.moltbot', '~/.moldbot'],
     envVar: 'OPENCLAW_DIR',
     focusedCommand: 'ccusage openclaw daily',
   },
@@ -95,7 +95,7 @@ export const SUPPORTED_SOURCES: SourceConfig[] = [
   {
     namespace: 'copilot',
     label: 'Copilot CLI',
-    defaultPaths: ['${COPILOT_OTEL_FILE_EXPORTER_PATH:-explicit .jsonl file}'],
+    defaultPaths: ['~/.copilot/otel/*.jsonl', '${COPILOT_OTEL_FILE_EXPORTER_PATH:-explicit .jsonl file}'],
     envVar: 'COPILOT_OTEL_FILE_EXPORTER_PATH',
     focusedCommand: 'ccusage copilot daily',
   },

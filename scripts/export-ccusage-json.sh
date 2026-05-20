@@ -47,6 +47,47 @@ path_has_files() {
   find "$path" "$@" -print -quit 2>/dev/null | grep -q .
 }
 
+path_list_has_files() {
+  local paths_csv="$1"
+  shift
+  local raw_path path
+
+  IFS=',' read -ra paths <<< "$paths_csv"
+  for raw_path in "${paths[@]}"; do
+    path="${raw_path#"${raw_path%%[![:space:]]*}"}"
+    path="${path%"${path##*[![:space:]]}"}"
+    [[ -z "$path" ]] && continue
+    case "$path" in
+      "~") path="$HOME" ;;
+      "~/"*) path="$HOME/${path#~/}" ;;
+    esac
+    path_has_files "$path" "$@" && return 0
+  done
+
+  return 1
+}
+
+path_list_subpath_has_files() {
+  local paths_csv="$1"
+  local subpath="$2"
+  shift 2
+  local raw_path path
+
+  IFS=',' read -ra paths <<< "$paths_csv"
+  for raw_path in "${paths[@]}"; do
+    path="${raw_path#"${raw_path%%[![:space:]]*}"}"
+    path="${path%"${path##*[![:space:]]}"}"
+    [[ -z "$path" ]] && continue
+    case "$path" in
+      "~") path="$HOME" ;;
+      "~/"*) path="$HOME/${path#~/}" ;;
+    esac
+    path_has_files "$path/$subpath" "$@" && return 0
+  done
+
+  return 1
+}
+
 json_has_usage() {
   local file="$1"
   local report="$2"
@@ -175,52 +216,51 @@ source_has_local_data() {
 
   case "$source" in
     claude)
-      path_has_files "${CLAUDE_CONFIG_DIR:-$HOME/.config/claude}/projects" -type f -name '*.jsonl' ||
-        path_has_files "$HOME/.claude/projects" -type f -name '*.jsonl'
+      path_list_subpath_has_files "${CLAUDE_CONFIG_DIR:-$HOME/.config/claude,$HOME/.claude}" projects -type f -name '*.jsonl'
       ;;
     codex)
-      path_has_files "${CODEX_HOME:-$HOME/.codex}/sessions" -type f
+      path_list_has_files "${CODEX_HOME:-$HOME/.codex}" -type f
       ;;
     opencode)
-      path_has_files "${OPENCODE_DATA_DIR:-$HOME/.local/share/opencode}" -type f
+      path_list_has_files "${OPENCODE_DATA_DIR:-$HOME/.local/share/opencode}" -type f
       ;;
     amp)
-      path_has_files "${AMP_DATA_DIR:-$HOME/.local/share/amp}" -type f
+      path_list_has_files "${AMP_DATA_DIR:-$HOME/.local/share/amp}" -type f
       ;;
     droid)
-      path_has_files "${DROID_SESSIONS_DIR:-$HOME/.factory/sessions}" -type f
+      path_list_has_files "${DROID_SESSIONS_DIR:-$HOME/.factory/sessions}" -type f
       ;;
     codebuff)
-      path_has_files "${CODEBUFF_DATA_DIR:-$HOME/.config/manicode}" -type f
+      path_list_has_files "${CODEBUFF_DATA_DIR:-$HOME/.config/manicode}" -type f
       ;;
     hermes)
-      path_has_files "${HERMES_HOME:-$HOME/.hermes}" -type f
+      path_list_has_files "${HERMES_HOME:-$HOME/.hermes}" -type f
       ;;
     pi)
-      path_has_files "${PI_AGENT_DIR:-$HOME/.pi/agent/sessions}" -type f
+      path_list_has_files "${PI_AGENT_DIR:-$HOME/.pi/agent/sessions}" -type f
       ;;
     goose)
-      path_has_files "${GOOSE_PATH_ROOT:-$HOME/.local/share/goose}" -type f ||
-        path_has_files "$HOME/.config/goose" -type f
+      path_list_has_files "${GOOSE_PATH_ROOT:-$HOME/.local/share/goose,$HOME/.config/goose}" -type f
       ;;
     openclaw)
-      path_has_files "${OPENCLAW_DIR:-$HOME/.openclaw}/agents" -type f -name '*session*.jsonl'
+      path_list_has_files "${OPENCLAW_DIR:-$HOME/.openclaw,$HOME/.clawdbot,$HOME/.moltbot,$HOME/.moldbot}" -type f -path '*/agents/*' -name '*.jsonl'
       ;;
     kilo)
-      path_has_files "${KILO_DATA_DIR:-$HOME/.local/share/kilo}" -type f -name '*.jsonl'
+      path_list_has_files "${KILO_DATA_DIR:-$HOME/.local/share/kilo}" -type f -name '*.jsonl'
       ;;
     kimi)
-      path_has_files "${KIMI_DATA_DIR:-$HOME/.kimi}/sessions" -type f ||
-        path_has_files "${KIMI_DATA_DIR:-$HOME/.kimi}" -type f -name 'wire.jsonl'
+      path_list_subpath_has_files "${KIMI_DATA_DIR:-$HOME/.kimi}" sessions -type f ||
+        path_list_has_files "${KIMI_DATA_DIR:-$HOME/.kimi}" -type f -name 'wire.jsonl'
       ;;
     qwen)
-      path_has_files "${QWEN_DATA_DIR:-$HOME/.qwen}" -type f
+      path_list_has_files "${QWEN_DATA_DIR:-$HOME/.qwen}" -type f
       ;;
     copilot)
-      [[ -n "${COPILOT_OTEL_FILE_EXPORTER_PATH:-}" && -f "$COPILOT_OTEL_FILE_EXPORTER_PATH" ]]
+      [[ -n "${COPILOT_OTEL_FILE_EXPORTER_PATH:-}" && -f "$COPILOT_OTEL_FILE_EXPORTER_PATH" ]] ||
+        path_has_files "$HOME/.copilot/otel" -type f -name '*.jsonl'
       ;;
     gemini)
-      path_has_files "${GEMINI_DATA_DIR:-$HOME/.gemini/tmp}" -type f
+      path_list_has_files "${GEMINI_DATA_DIR:-$HOME/.gemini/tmp}" -type f
       ;;
     *)
       return 1
