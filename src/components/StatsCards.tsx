@@ -7,13 +7,21 @@ import {
   Trophy,
   Layers,
 } from 'lucide-react';
-import type { CodexData } from '../types';
+import type { UsageData } from '../types';
 import dayjs from 'dayjs';
 import { formatTokens, formatUSD } from '../utils/format';
+import { summarizeUsage } from '../utils/usage';
 
-export default function StatsCards({ data }: { data: CodexData }) {
+function sumTokensForKey<T extends { totalTokens: number }>(entries: T[], key: keyof T, value: string): number {
+  return entries
+    .filter((entry) => entry[key] === value)
+    .reduce((sum, entry) => sum + entry.totalTokens, 0);
+}
+
+export default function StatsCards({ data }: { data: UsageData }) {
   const stats = useMemo(() => {
-    const totals = data.totals;
+    const summary = summarizeUsage(data);
+    const totals = summary.totals;
     const daily = data.daily ?? [];
     const sessions = data.sessions ?? [];
 
@@ -21,35 +29,21 @@ export default function StatsCards({ data }: { data: CodexData }) {
     const lifetimeCost = totals?.costUSD ?? 0;
 
     const todayStr = dayjs().format('YYYY-MM-DD');
-    const todayEntry = daily.find((d) => d.date === todayStr);
+    const todayTokensForDate = sumTokensForKey(daily, 'date', todayStr);
     // Fallback to most recent day for static builds with frozen data
-    const effectiveToday = todayEntry ?? [...daily].sort((a, b) => b.date.localeCompare(a.date))[0];
-    const todayTokens = effectiveToday?.totalTokens ?? 0;
+    const latestDate = [...new Set(daily.map((d) => d.date))].sort((a, b) => b.localeCompare(a))[0];
+    const todayTokens = todayTokensForDate || (latestDate ? sumTokensForKey(daily, 'date', latestDate) : 0);
 
     const monthStr = dayjs().format('YYYY-MM');
-    const monthEntry = data.monthly?.find((m) => m.month === monthStr);
-    const monthlySorted = [...(data.monthly ?? [])].sort((a, b) => b.month.localeCompare(a.month));
-    const effectiveMonth = monthEntry ?? monthlySorted[0];
-    const monthTokens = effectiveMonth?.totalTokens ?? 0;
+    const monthly = data.monthly ?? [];
+    const monthTokensForMonth = sumTokensForKey(monthly, 'month', monthStr);
+    const latestMonth = [...new Set(monthly.map((m) => m.month))].sort((a, b) => b.localeCompare(a))[0];
+    const monthTokens = monthTokensForMonth || (latestMonth ? sumTokensForKey(monthly, 'month', latestMonth) : 0);
 
     let longestSessionTokens = 0;
-    let mostUsedModel = '-';
-    let modelMax = 0;
-    const modelCounts: Record<string, number> = {};
-
     sessions.forEach((s) => {
       if (s.totalTokens > longestSessionTokens) {
         longestSessionTokens = s.totalTokens;
-      }
-      Object.entries(s.models).forEach(([name, m]) => {
-        modelCounts[name] = (modelCounts[name] ?? 0) + m.totalTokens;
-      });
-    });
-
-    Object.entries(modelCounts).forEach(([name, count]) => {
-      if (count > modelMax) {
-        modelMax = count;
-        mostUsedModel = name;
       }
     });
 
@@ -59,7 +53,7 @@ export default function StatsCards({ data }: { data: CodexData }) {
       todayTokens,
       monthTokens,
       longestSessionTokens,
-      mostUsedModel,
+      mostUsedModel: summary.modelTotals[0]?.name ?? '-',
     };
   }, [data]);
 

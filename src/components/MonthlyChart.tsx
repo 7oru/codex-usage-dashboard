@@ -14,16 +14,35 @@ import { formatTokens } from '../utils/format';
 
 export default function MonthlyChart({ monthly }: { monthly: MonthlyEntry[] }) {
   const data = useMemo(() => {
-    return [...monthly]
-      .sort((a, b) => a.month.localeCompare(b.month))
-      .map((m) => ({
+    const byMonth = new Map<string, {
+      month: string;
+      input: number;
+      cached: number;
+      output: number;
+      reasoning: number;
+      cost: number;
+    }>();
+
+    monthly.forEach((m) => {
+      const row = byMonth.get(m.month) ?? {
         month: m.month,
-        input: m.inputTokens,
-        cached: m.cachedInputTokens,
-        output: m.outputTokens,
-        reasoning: m.reasoningOutputTokens,
-        cost: +(m.costUSD ?? 0).toFixed(2),
-      }));
+        input: 0,
+        cached: 0,
+        output: 0,
+        reasoning: 0,
+        cost: 0,
+      };
+      row.input += m.inputTokens;
+      row.cached += m.cachedInputTokens;
+      row.output += m.outputTokens;
+      row.reasoning += m.reasoningOutputTokens;
+      row.cost += m.costUSD ?? 0;
+      byMonth.set(m.month, row);
+    });
+
+    return [...byMonth.values()]
+      .sort((a, b) => a.month.localeCompare(b.month))
+      .map((m) => ({ ...m, cost: +m.cost.toFixed(2) }));
   }, [monthly]);
 
   if (data.length === 0) return null;
