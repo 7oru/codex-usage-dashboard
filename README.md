@@ -1,6 +1,6 @@
-# Codex Usage Dashboard
+# Local AI Usage Dashboard
 
-> Visualize your local Codex sessions and export an AI-native engineering report.
+> Visualize local ccusage-supported AI coding sessions and export an AI-native engineering report.
 
 **Show recruiters how much AI-assisted coding you actually did.**
 
@@ -12,7 +12,7 @@
 
 Recruiters ask *"How do you use AI?"* — now you can show them the receipts.
 
-This dashboard reads your local `~/.codex/sessions` logs, crunches the numbers, and produces charts + a downloadable Markdown report you can paste straight into your portfolio, GitHub README, or LinkedIn featured section.
+This dashboard reads local session logs through `ccusage`, crunches the numbers, and produces charts + a downloadable Markdown report you can paste straight into your portfolio, GitHub README, or LinkedIn featured section.
 
 > **Privacy First:** Everything stays local. No cloud upload, no API keys, no data leaves your machine.
 
@@ -22,7 +22,7 @@ This dashboard reads your local `~/.codex/sessions` logs, crunches the numbers, 
 git clone https://github.com/7oru/codex-usage-dashboard.git
 cd codex-usage-dashboard
 npm install
-npm run export:data   # Scans ~/.codex/sessions
+npm run export:data   # Scans all ccusage-supported sources it can detect
 npm run dev           # http://localhost:5173
 ```
 
@@ -38,10 +38,10 @@ open dist/index.html
 Click **Download Markdown Report** inside the dashboard to generate a summary like this — real numbers from your actual sessions:
 
 ```markdown
-# Codex Usage Report
+# Local AI Usage Report
 
 > Generated at 2026-05-19
-> Data source: local `~/.codex/sessions`
+> Data source: local ccusage-supported session logs
 
 ## Overview
 
@@ -65,7 +65,9 @@ Paste it into your portfolio, GitHub profile README, or LinkedIn featured sectio
 
 - **100% Local** — no cloud upload, no API keys required
 - **Backfill Historical Sessions** — visualize all your past Codex usage
+- **Multi-Source Overview** — aggregate Codex, Claude Code, OpenClaw, Gemini CLI, and other ccusage sources
 - **Daily / Monthly / Session Charts** — interactive charts powered by Recharts
+- **Model Views** — top models, daily model trends, and source × model breakdowns
 - **Token Breakdown** — input / output / reasoning / cached token breakdown
 - **Export Markdown Report** — generate a clean report for recruiters or your portfolio
 - **Local Static Build** — build once, then open `dist/index.html` directly
@@ -73,14 +75,22 @@ Paste it into your portfolio, GitHub profile README, or LinkedIn featured sectio
 ## Data Flow
 
 ```
-~/.codex/sessions
+ccusage-supported local session paths
         ↓
   ccusage --json
         ↓
-public/data/{daily,monthly,session}.json
+public/data/usage-{daily,monthly,session}.json
         ↓
    React Dashboard (local browser)
 ```
+
+## Supported Sources
+
+The dashboard follows ccusage source namespaces and keeps model names dynamic, so new models show up without code changes. The source registry currently includes:
+
+`claude`, `codex`, `opencode`, `amp`, `droid`, `codebuff`, `hermes`, `pi`, `goose`, `openclaw`, `kilo`, `kimi`, `qwen`, `copilot`, `gemini`.
+
+Each source is shown in the dashboard with its default session path or environment variable. Use the Sources tab when a source is missing from your export and you need the expected local path.
 
 ## Project Structure
 
@@ -96,18 +106,22 @@ codex-usage-dashboard/
 │   ├── App.tsx
 │   ├── main.tsx
 │   ├── types.ts
-│   ├── global.d.ts              # Window.__CODEX_DATA__ type declarations
+│   ├── global.d.ts              # Window.__USAGE_DATA__ type declarations
+│   ├── sources.ts               # ccusage source registry
 │   ├── hooks/
 │   │   └── useCodexData.ts      # Fetch + manual upload logic with JSON validation
 │   ├── components/
 │   │   ├── StatsCards.tsx       # Overview cards
 │   │   ├── DailyChart.tsx       # Daily stacked bar chart
 │   │   ├── MonthlyChart.tsx     # Monthly bar + cost chart
-│   │   ├── TokenBreakdown.tsx   # Pie charts for token types & models
+│   │   ├── TokenBreakdown.tsx   # Pie charts for token types & top models
+│   │   ├── SourceOverview.tsx   # Source chart + default path table
+│   │   ├── ModelOverview.tsx    # Model charts + source/model matrix
 │   │   ├── SessionTable.tsx     # Sortable / expandable session list
 │   │   └── ExportMarkdown.tsx   # Portfolio markdown export
 │   └── utils/
-│       └── format.ts            # Shared number formatting helpers
+│       ├── format.ts            # Shared number formatting helpers
+│       └── usage.ts             # Usage aggregation helpers
 ├── package.json
 ├── tailwind.config.js
 └── README.md
@@ -140,23 +154,30 @@ open dist/index.html
 If you prefer not to run the export script, you can generate JSON manually:
 
 ```bash
-npx ccusage@latest codex daily --json > public/data/codex-daily.json
-npx ccusage@latest codex monthly --json > public/data/codex-monthly.json
-npx ccusage@latest codex session --json > public/data/codex-session.json
+npx ccusage@latest daily --json > public/data/usage-daily.json
+npx ccusage@latest monthly --json > public/data/usage-monthly.json
+npx ccusage@latest session --json > public/data/usage-session.json
 ```
 
 Then drag and drop the JSON files directly into the dashboard UI.
 
-## Custom Agent Export
+Legacy `public/data/codex-*.json` files are still accepted as a compatibility fallback.
 
-You can switch the target agent via environment variable:
+## Focused Source Export
+
+By default, ccusage exports every detected source. You can focus on one source:
 
 ```bash
-AGENT=claude npm run export:data
-AGENT=cursor npm run export:data
+SOURCE=codex npm run export:data
+SOURCE=claude npm run export:data
+SOURCE=openclaw npm run export:data
 ```
 
-The dashboard still uses Codex-oriented labels, so treat non-Codex exports as a local convenience rather than a fully branded multi-agent UI.
+Or export several focused sources into a manifest-backed bundle:
+
+```bash
+SOURCES=codex,claude,openclaw npm run export:data
+```
 
 ## AI-Native Development
 

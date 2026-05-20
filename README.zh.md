@@ -1,6 +1,6 @@
-# Codex Usage Dashboard
+# Local AI Usage Dashboard
 
-> 本地可视化 Codex 用量，一键导出 AI-Native 工程报告。
+> 本地可视化 ccusage 支持的 AI Coding 会话用量，一键导出 AI-Native 工程报告。
 
 **面试时别再空口说"我很会用 AI"了——直接把数据拍桌上。**
 
@@ -12,9 +12,9 @@
 
 面试官问 "说说你怎么用 AI 辅助开发？"
 
-以前你只能嘴上说"我经常用 Codex"，现在你可以打开这个仪表盘，把 ** lifetime tokens、峰值用量、最常用模型** 截个图或者贴一段 Markdown 进简历。
+以前你只能嘴上说"我经常用 AI 写代码"，现在你可以打开这个仪表盘，把 **lifetime tokens、峰值用量、最常用模型、不同工具来源** 截个图或者贴一段 Markdown 进简历。
 
-它只读你本地的 `~/.codex/sessions`，在浏览器里跑，不上传、不联网、不要 API Key。
+它通过 `ccusage` 读取本地会话日志，在浏览器里跑，不上传、不联网、不要 API Key。
 
 > **Privacy First** —— 你的 prompt、代码、数据，全留在本地。
 
@@ -24,7 +24,7 @@
 git clone https://github.com/7oru/codex-usage-dashboard.git
 cd codex-usage-dashboard
 npm install
-npm run export:data   # 扫描 ~/.codex/sessions
+npm run export:data   # 扫描所有 ccusage 能检测到的 source
 npm run dev           # http://localhost:5173
 ```
 
@@ -40,10 +40,10 @@ open dist/index.html
 点仪表盘里的 **Download Markdown Report**，自动生成下面这种报告。复制粘贴到 GitHub Profile README、作品集网站或者牛客/知乎帖子都行：
 
 ```markdown
-# Codex Usage Report
+# Local AI Usage Report
 
 > Generated at 2026-05-19
-> Data source: local `~/.codex/sessions`
+> Data source: local ccusage-supported session logs
 
 ## Overview
 
@@ -66,8 +66,10 @@ open dist/index.html
 ## 功能一览
 
 - **100% 本地运行** —— 零上传、零配置、零 API Key
-- **回溯历史** —— 把以前所有的 Codex 会话一次性可视化
+- **回溯历史** —— 把以前所有本地 AI coding 会话一次性可视化
+- **多 Source 概览** —— 聚合 Codex、Claude Code、OpenClaw、Gemini CLI 等 ccusage 来源
 - **多维图表** —— 日/月维度 + input/output/reasoning/cached 拆分
+- **模型视图** —— Top models、每日模型趋势、source × model 明细
 - **Token 明细** —— 饼图看模型占比、看 token 类型分布
 - **Markdown 导出** —— 一键生成可粘贴的报告
 - **本地静态构建** —— 打包后直接打开 `dist/index.html`
@@ -75,14 +77,22 @@ open dist/index.html
 ## 数据从哪来
 
 ```
-~/.codex/sessions
+ccusage 支持的本地会话路径
         ↓
   ccusage --json
         ↓
-public/data/{daily,monthly,session}.json
+public/data/usage-{daily,monthly,session}.json
         ↓
    浏览器里的 React 仪表盘
 ```
+
+## 支持的 Source
+
+仪表盘跟随 ccusage 的 source namespace，模型名完全动态读取，所以新增模型不需要改代码。当前 source registry 包括：
+
+`claude`, `codex`, `opencode`, `amp`, `droid`, `codebuff`, `hermes`, `pi`, `goose`, `openclaw`, `kilo`, `kimi`, `qwen`, `copilot`, `gemini`。
+
+Sources 页面会展示每个 source 的默认 session path 或环境变量，方便排查为什么某个工具没有被导出。
 
 ## 目录结构
 
@@ -98,18 +108,22 @@ codex-usage-dashboard/
 │   ├── App.tsx
 │   ├── main.tsx
 │   ├── types.ts
-│   ├── global.d.ts              # Window.__CODEX_DATA__ 类型声明
+│   ├── global.d.ts              # Window.__USAGE_DATA__ 类型声明
+│   ├── sources.ts               # ccusage source registry
 │   ├── hooks/
 │   │   └── useCodexData.ts      # 数据获取 + 手动上传（含 JSON 校验）
 │   ├── components/
 │   │   ├── StatsCards.tsx       # 概览卡片
 │   │   ├── DailyChart.tsx       # 每日堆叠柱状图
 │   │   ├── MonthlyChart.tsx     # 月度柱状图 + 费用
-│   │   ├── TokenBreakdown.tsx   # Token 类型 & 模型饼图
+│   │   ├── TokenBreakdown.tsx   # Token 类型 & Top 模型饼图
+│   │   ├── SourceOverview.tsx   # Source 图表 + 默认路径表
+│   │   ├── ModelOverview.tsx    # 模型图表 + source/model 矩阵
 │   │   ├── SessionTable.tsx     # 可排序 / 可展开的会话列表
 │   │   └── ExportMarkdown.tsx   # Markdown 报告导出
 │   └── utils/
-│       └── format.ts            # 共享数字格式化
+│       ├── format.ts            # 共享数字格式化
+│       └── usage.ts             # 用量聚合工具
 ├── package.json
 ├── tailwind.config.js
 └── README.md
@@ -142,21 +156,30 @@ open dist/index.html
 不想跑脚本？手动生成 JSON 也行：
 
 ```bash
-npx ccusage@latest codex daily --json > public/data/codex-daily.json
-npx ccusage@latest codex monthly --json > public/data/codex-monthly.json
-npx ccusage@latest codex session --json > public/data/codex-session.json
+npx ccusage@latest daily --json > public/data/usage-daily.json
+npx ccusage@latest monthly --json > public/data/usage-monthly.json
+npx ccusage@latest session --json > public/data/usage-session.json
 ```
 
 然后直接把 JSON 文件拖进页面。
 
-## 导出其他 Agent
+旧的 `public/data/codex-*.json` 仍然会作为兼容 fallback 被读取。
+
+## 只导出某个 Source
+
+默认会导出 ccusage 能检测到的所有 source。也可以只看某一个：
 
 ```bash
-AGENT=claude npm run export:data
-AGENT=cursor npm run export:data
+SOURCE=codex npm run export:data
+SOURCE=claude npm run export:data
+SOURCE=openclaw npm run export:data
 ```
 
-页面文案目前仍以 Codex 为主，所以非 Codex 导出更适合作为本地临时查看能力，不算完整的多 Agent UI。
+或者一次导出多个 focused source，并生成 manifest：
+
+```bash
+SOURCES=codex,claude,openclaw npm run export:data
+```
 
 ## 这个项目是怎么写的
 
