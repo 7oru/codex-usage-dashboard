@@ -3,27 +3,38 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+BUILD_DIR="${BUILD_DIR:-dist}"
 
-mkdir -p "$ROOT_DIR/dist/assets"
+if [[ "$BUILD_DIR" = /* ]]; then
+  DIST_DIR="$BUILD_DIR"
+else
+  DIST_DIR="$ROOT_DIR/$BUILD_DIR"
+fi
+
+mkdir -p "$DIST_DIR/assets"
 
 echo "[build] Compiling CSS..."
-npx tailwindcss -i "$ROOT_DIR/src/index.css" -o "$ROOT_DIR/dist/assets/index.css" --minify
+npx tailwindcss -i "$ROOT_DIR/src/index.css" -o "$DIST_DIR/assets/index.css" --minify
 
 echo "[build] Bundling JS (no CSS import)..."
-cat "$ROOT_DIR/src/main.tsx" | grep -v "import './index.css'" > "$ROOT_DIR/src/main.nocss.tsx"
-npx esbuild "$ROOT_DIR/src/main.nocss.tsx" \
+MAIN_NO_CSS="$ROOT_DIR/src/main.nocss.$$.$RANDOM.tmp"
+trap 'rm -f "$MAIN_NO_CSS"' EXIT
+grep -v "import './index.css'" "$ROOT_DIR/src/main.tsx" > "$MAIN_NO_CSS"
+npx esbuild "$MAIN_NO_CSS" \
   --bundle \
-  --outfile="$ROOT_DIR/dist/assets/index.js" \
+  --outfile="$DIST_DIR/assets/index.js" \
   --format=iife \
   --platform=browser \
+  --loader:.tmp=tsx \
   --loader:.tsx=tsx \
   --jsx=automatic \
   --minify
-rm "$ROOT_DIR/src/main.nocss.tsx"
+rm "$MAIN_NO_CSS"
+trap - EXIT
 
 echo "[build] Copying public assets..."
-cp "$ROOT_DIR/public/favicon.svg" "$ROOT_DIR/dist/favicon.svg"
-rm -f "$ROOT_DIR/dist/data"/codex-*.json "$ROOT_DIR/dist/data"/usage-*.json 2>/dev/null || true
+cp "$ROOT_DIR/public/favicon.svg" "$DIST_DIR/favicon.svg"
+rm -f "$DIST_DIR/data"/codex-*.json "$DIST_DIR/data"/usage-*.json 2>/dev/null || true
 
 echo "[build] Inline JSON data..."
 INLINE_JSON=$(
@@ -32,15 +43,14 @@ INLINE_JSON=$(
     const path = require('path');
     const root = '$ROOT_DIR';
     const data = {};
+    const usageDataFile = process.env.USAGE_DATA_FILE;
     const rowsFor = (content, key) => {
       if (Array.isArray(content[key])) return content[key];
       if (Array.isArray(content.data) && content.type === (key === 'sessions' ? 'session' : key)) return content.data;
       return [];
     };
     const totalsFor = (content) => content.totals || content.summary;
-    const mergeFile = (file, source) => {
-      try {
-        const content = JSON.parse(fs.readFileSync(path.join(root, file), 'utf8'));
+    const mergeContent = (content, source) => {
         for (const key of ['daily', 'monthly', 'sessions']) {
           const rows = rowsFor(content, key);
           if (rows.length > 0) {
@@ -55,32 +65,42 @@ INLINE_JSON=$(
         if (totalsFor(content) && !source) {
           data.totals = totalsFor(content);
         }
+    };
+    const mergeFile = (file, source) => {
+      try {
+        const content = JSON.parse(fs.readFileSync(path.join(root, file), 'utf8'));
+        mergeContent(content, source);
       } catch (e) {}
     };
 
-    const hasUsageFiles = fs.existsSync(path.join(root, 'public/data/usage-daily.json')) ||
-      fs.existsSync(path.join(root, 'public/data/usage-monthly.json')) ||
-      fs.existsSync(path.join(root, 'public/data/usage-session.json'));
+    if (usageDataFile) {
+      const samplePath = path.isAbsolute(usageDataFile) ? usageDataFile : path.join(root, usageDataFile);
+      mergeContent(JSON.parse(fs.readFileSync(samplePath, 'utf8')));
+    } else {
+      const hasUsageFiles = fs.existsSync(path.join(root, 'public/data/usage-daily.json')) ||
+        fs.existsSync(path.join(root, 'public/data/usage-monthly.json')) ||
+        fs.existsSync(path.join(root, 'public/data/usage-session.json'));
 
-    if (hasUsageFiles) {
-      mergeFile('public/data/usage-daily.json');
-      mergeFile('public/data/usage-monthly.json');
-      mergeFile('public/data/usage-session.json');
-    }
-
-    try {
-      const manifest = JSON.parse(fs.readFileSync(path.join(root, 'public/data/manifest.json'), 'utf8'));
-      for (const entry of manifest.sources || []) {
-        if (entry.daily) mergeFile(path.join('public/data', entry.daily), entry.source);
-        if (entry.monthly) mergeFile(path.join('public/data', entry.monthly), entry.source);
-        if (entry.session) mergeFile(path.join('public/data', entry.session), entry.source);
+      if (hasUsageFiles) {
+        mergeFile('public/data/usage-daily.json');
+        mergeFile('public/data/usage-monthly.json');
+        mergeFile('public/data/usage-session.json');
       }
-    } catch (e) {}
 
-    if (!data.daily && !data.monthly && !data.sessions) {
-      mergeFile('public/data/codex-daily.json', 'codex');
-      mergeFile('public/data/codex-monthly.json', 'codex');
-      mergeFile('public/data/codex-session.json', 'codex');
+      try {
+        const manifest = JSON.parse(fs.readFileSync(path.join(root, 'public/data/manifest.json'), 'utf8'));
+        for (const entry of manifest.sources || []) {
+          if (entry.daily) mergeFile(path.join('public/data', entry.daily), entry.source);
+          if (entry.monthly) mergeFile(path.join('public/data', entry.monthly), entry.source);
+          if (entry.session) mergeFile(path.join('public/data', entry.session), entry.source);
+        }
+      } catch (e) {}
+
+      if (!data.daily && !data.monthly && !data.sessions) {
+        mergeFile('public/data/codex-daily.json', 'codex');
+        mergeFile('public/data/codex-monthly.json', 'codex');
+        mergeFile('public/data/codex-session.json', 'codex');
+      }
     }
 
     const safe = JSON.stringify(data).replace(/<\/script>/gi, '<\\/script>');
@@ -89,7 +109,7 @@ INLINE_JSON=$(
 )
 
 echo "[build] Writing index.html..."
-cat > "$ROOT_DIR/dist/index.html" <<EOF
+cat > "$DIST_DIR/index.html" <<EOF
 <!doctype html>
 <html lang="en">
   <head>
@@ -107,4 +127,4 @@ cat > "$ROOT_DIR/dist/index.html" <<EOF
 </html>
 EOF
 
-echo "[build] Done. Output: $ROOT_DIR/dist/"
+echo "[build] Done. Output: $DIST_DIR/"

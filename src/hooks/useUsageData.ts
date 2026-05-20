@@ -26,8 +26,8 @@ function coerceCcusageJson(json: Record<string, unknown>): UsageData {
     if (json.type === 'session') data.sessions = json.data as UsageData['sessions'];
   }
 
-  if (isRecord(json.totals)) data.totals = json.totals as UsageData['totals'];
-  if (isRecord(json.summary)) data.totals = json.summary as UsageData['totals'];
+  if (isRecord(json.totals)) data.totals = json.totals as unknown as UsageData['totals'];
+  if (isRecord(json.summary)) data.totals = json.summary as unknown as UsageData['totals'];
 
   return data;
 }
@@ -122,21 +122,22 @@ export function useUsageData() {
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
 
     const inline = (typeof window !== 'undefined' && window.__USAGE_DATA__) || null;
     if (inline) {
-      const merged: UsageData = {};
-      mergeUsageJson(merged, inline);
-      if (!cancelled) {
-        if (hasUsageData(merged)) {
-          setData(merged);
-          setError(null);
-        } else {
-          setError('No ccusage data found. Run `npm run export:data` before building, or upload JSON manually.');
+      Promise.resolve().then(() => {
+        const merged: UsageData = {};
+        mergeUsageJson(merged, inline);
+        if (!cancelled) {
+          if (hasUsageData(merged)) {
+            setData(merged);
+            setError(null);
+          } else {
+            setError('No ccusage data found. Run `npm run export:data` before building, or upload JSON manually.');
+          }
+          setLoading(false);
         }
-        setLoading(false);
-      }
+      });
       return () => { cancelled = true; };
     }
 

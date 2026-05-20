@@ -35,6 +35,17 @@ npm run build
 open dist/index.html
 ```
 
+想生成一份可以公开展示的脱敏 demo：
+
+[打开仓库里的 sample HTML](dist-sample/index.html)，或者本地重新生成：
+
+```bash
+npm run build:sample
+open dist-sample/index.html
+```
+
+sample build 使用 `sample-data/usage.json`，里面只有假的 source、session、token 和 cost。GitHub 可能会展示 HTML 源码而不是直接渲染；clone 后本地打开这个文件就是完整 dashboard。
+
 ## 面试/作品集数据示例
 
 点仪表盘里的 **Download Markdown Report**，自动生成下面这种报告。复制粘贴到 GitHub Profile README、作品集网站或者牛客/知乎帖子都行：
@@ -101,6 +112,9 @@ codex-usage-dashboard/
 ├── scripts/
 │   ├── export-ccusage-json.sh   # 导出 ccusage JSON
 │   └── build.sh                 # 本地静态构建 (esbuild + tailwindcss)
+├── sample-data/
+│   ├── README.md                # 合成数据说明
+│   └── usage.json               # 可以公开的假 demo 数据
 ├── public/
 │   └── data/                    # 生成的数据 (gitignored)
 │       └── .gitkeep
@@ -141,7 +155,8 @@ npm run dev           # Vite + HMR
 ### 本地静态构建
 
 ```bash
-npm run build         # 输出 dist/，纯静态文件
+npm run build         # 输出 dist/，内联真实本地数据
+npm run build:sample  # 输出 dist-sample/，内联合成 demo 数据
 ```
 
 这个静态构建只用于本地查看。脚本会用 esbuild 打包 JS、用 Tailwind CSS CLI 编译 CSS，然后生成一个可直接打开的 `dist/`：
@@ -151,6 +166,8 @@ open dist/index.html
 ```
 
 > **本地隐私提醒**：`npm run build` 会把生成的 usage JSON 内联进 `dist/index.html`。除非你明确想公开这些用量数据，否则不要发布 `dist/`。对外分享时建议用页面里的 Markdown 导出，再按需删改。
+
+> **脱敏 sample 提醒**：`npm run build:sample` 只读取 `sample-data/usage.json`，输出 `dist-sample/index.html`。这份 fixture 是合成数据，可以进 repo；`dist-sample/` 是可重复生成的产物，默认忽略。
 
 ## 手动导入数据
 

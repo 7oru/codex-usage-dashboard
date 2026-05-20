@@ -12,6 +12,7 @@ export interface ModelUsage {
   outputTokens: number;
   reasoningOutputTokens: number;
   totalTokens: number;
+  costUSD: number;
   isFallback: boolean;
 }
 

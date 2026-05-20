@@ -140,6 +140,7 @@ function normalizeModels(entry: Record<string, unknown>, totals: UsageTotals): R
         outputTokens: Math.round(totals.outputTokens / divisor),
         reasoningOutputTokens: Math.round(totals.reasoningOutputTokens / divisor),
         totalTokens: Math.round(totals.totalTokens / divisor),
+        costUSD: totals.costUSD / divisor,
         isFallback: false,
       },
     ])
@@ -243,14 +244,56 @@ function addTrendValue(
   map.set(date, row);
 }
 
-function aggregateFromEntries(entries: Array<DailyEntry | MonthlyEntry | SessionEntry>, sourceMap: Map<string, NamedTotal>) {
+type UsageEntry = DailyEntry | MonthlyEntry | SessionEntry;
+
+function filterEntriesBySource<T extends UsageEntry>(entries: T[], source: string): T[] {
+  return entries.filter((entry) => getEntrySource(entry) === source);
+}
+
+function aggregateSourceTotals(
+  source: string,
+  monthly: MonthlyEntry[],
+  daily: DailyEntry[],
+  sessions: SessionEntry[],
+  sourceTotals: Map<string, NamedTotal>
+) {
+  const sourceTotal = getOrCreateTotal(sourceTotals, source, getSourceLabel(source));
+  const entries = monthly.length > 0 ? monthly : daily.length > 0 ? daily : sessions;
+  entries.forEach((entry) => addUsage(sourceTotal, entry));
+  sourceTotal.sessions = sessions.length;
+}
+
+function aggregateModelTotals(
+  source: string,
+  entries: UsageEntry[],
+  modelTotals: Map<string, NamedTotal>,
+  sourceModelTotals: Map<string, { source: string; sourceLabel: string; model: string; totalTokens: number; costUSD: number }>
+) {
   entries.forEach((entry) => {
-    const source = getEntrySource(entry);
-    addUsage(getOrCreateTotal(sourceMap, source, getSourceLabel(source)), entry);
+    const isSessionEntry = 'sessionId' in entry;
+    Object.entries(entry.models).forEach(([modelName, modelUsage]) => {
+      const modelTotal = getOrCreateTotal(modelTotals, modelName, modelName);
+      addModelUsage(modelTotal, modelUsage);
+      if (isSessionEntry) modelTotal.sessions += 1;
+
+      const key = `${source}::${modelName}`;
+      const sourceModel = sourceModelTotals.get(key) ?? {
+        source,
+        sourceLabel: getSourceLabel(source),
+        model: modelName,
+        totalTokens: 0,
+        costUSD: 0,
+      };
+      sourceModel.totalTokens += modelUsage.totalTokens;
+      sourceModel.costUSD += modelUsage.costUSD;
+      sourceModelTotals.set(key, sourceModel);
+    });
   });
 }
 
 export function summarizeUsage(data: UsageData): UsageSummary {
+  const daily = data.daily ?? [];
+  const monthly = data.monthly ?? [];
   const sessions = data.sessions ?? [];
   const sourceTotals = new Map<string, NamedTotal>();
   const modelTotals = new Map<string, NamedTotal>();
@@ -258,43 +301,27 @@ export function summarizeUsage(data: UsageData): UsageSummary {
   const dailyBySource = new Map<string, Record<string, string | number>>();
   const dailyByModel = new Map<string, Record<string, string | number>>();
 
-  if (sessions.length > 0) {
-    sessions.forEach((session) => {
-      const source = getEntrySource(session);
-      const sourceTotal = getOrCreateTotal(sourceTotals, source, getSourceLabel(source));
-      addUsage(sourceTotal, session);
-      sourceTotal.sessions += 1;
+  const sources = new Set<string>();
+  [...monthly, ...daily, ...sessions].forEach((entry) => sources.add(getEntrySource(entry)));
 
-      Object.entries(session.models).forEach(([modelName, modelUsage]) => {
-        const modelTotal = getOrCreateTotal(modelTotals, modelName, modelName);
-        addModelUsage(modelTotal, modelUsage);
-        modelTotal.sessions += 1;
+  sources.forEach((source) => {
+    const sourceMonthly = filterEntriesBySource(monthly, source);
+    const sourceDaily = filterEntriesBySource(daily, source);
+    const sourceSessions = filterEntriesBySource(sessions, source);
+    aggregateSourceTotals(source, sourceMonthly, sourceDaily, sourceSessions, sourceTotals);
+    aggregateModelTotals(
+      source,
+      sourceSessions.length > 0 ? sourceSessions : sourceDaily.length > 0 ? sourceDaily : sourceMonthly,
+      modelTotals,
+      sourceModelTotals
+    );
+  });
 
-        const key = `${source}::${modelName}`;
-        const sourceModel = sourceModelTotals.get(key) ?? {
-          source,
-          sourceLabel: getSourceLabel(source),
-          model: modelName,
-          totalTokens: 0,
-          costUSD: 0,
-        };
-        sourceModel.totalTokens += modelUsage.totalTokens;
-        sourceModel.costUSD += session.costUSD;
-        sourceModelTotals.set(key, sourceModel);
-      });
-    });
-  } else {
-    aggregateFromEntries(data.monthly?.length ? data.monthly : data.daily ?? [], sourceTotals);
-  }
-
-  (data.daily ?? []).forEach((entry) => {
+  daily.forEach((entry) => {
     const source = getEntrySource(entry);
     addTrendValue(dailyBySource, entry.date, getSourceLabel(source), entry.totalTokens);
     Object.entries(entry.models).forEach(([modelName, modelUsage]) => {
       addTrendValue(dailyByModel, entry.date, modelName, modelUsage.totalTokens);
-      if (sessions.length === 0) {
-        addModelUsage(getOrCreateTotal(modelTotals, modelName, modelName), modelUsage);
-      }
     });
   });
 

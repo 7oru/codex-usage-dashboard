@@ -33,6 +33,17 @@ npm run build
 open dist/index.html
 ```
 
+To generate a publish-safe demo with synthetic data:
+
+[Open the included sample HTML](dist-sample/index.html), or rebuild it locally:
+
+```bash
+npm run build:sample
+open dist-sample/index.html
+```
+
+The sample build uses `sample-data/usage.json`, which contains fake sources, sessions, token counts, and costs only. GitHub may show the HTML source instead of rendering it; cloning the repo and opening the file locally renders the dashboard.
+
 ## Portfolio Export Example
 
 Click **Download Markdown Report** inside the dashboard to generate a summary like this — real numbers from your actual sessions:
@@ -99,6 +110,9 @@ codex-usage-dashboard/
 ├── scripts/
 │   ├── export-ccusage-json.sh   # Export ccusage JSON to public/data/
 │   └── build.sh                 # Local static build (esbuild + tailwindcss)
+├── sample-data/
+│   ├── README.md                # Notes for the synthetic fixture
+│   └── usage.json               # Safe fake data for demos
 ├── public/
 │   └── data/                    # Generated usage JSON (gitignored)
 │       └── .gitkeep             # Keeps the directory in git
@@ -140,6 +154,7 @@ npm run dev           # Vite dev server with HMR
 
 ```bash
 npm run build         # Generates dist/ (static files)
+npm run build:sample  # Generates dist-sample/ with synthetic data
 ```
 
 The static build is meant for local viewing only. It uses **esbuild** to bundle JS and **Tailwind CSS CLI** to compile CSS, then writes a self-contained `dist/` folder:
@@ -149,6 +164,8 @@ open dist/index.html
 ```
 
 > **Local privacy note:** `npm run build` inlines your generated usage JSON into `dist/index.html`. Do not publish `dist/` unless you intentionally want to share that usage data. For sharing, use the dashboard's Markdown export and edit it as needed.
+
+> **Safe sample note:** `npm run build:sample` uses only `sample-data/usage.json` and writes `dist-sample/index.html`. That fixture is synthetic and safe to commit; the generated `dist-sample/` folder is ignored because it is reproducible.
 
 ## Manual Data Upload
 

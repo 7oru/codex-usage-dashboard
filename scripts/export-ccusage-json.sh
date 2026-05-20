@@ -255,7 +255,7 @@ run_ccusage_export() {
   if perl -e "$timeout_runner" "$CCUSAGE_REPORT_TIMEOUT_SECONDS" \
     npx ccusage@latest "$source" "$report" --json > "$tmp_file" 2>/dev/null; then
     if ! json_has_usage "$tmp_file" "$report"; then
-      rm -f "$tmp_file" "$output_file"
+      rm -f "$tmp_file"
       return 1
     fi
     enrich_exported_json "$tmp_file" "$source" "$report"
@@ -263,17 +263,18 @@ run_ccusage_export() {
     return 0
   fi
 
-  rm -f "$tmp_file" "$output_file"
+  rm -f "$tmp_file"
   return 1
 }
 
 write_manifest() {
   local sources_csv="$1"
+  local manifest_file="${2:-$OUTPUT_DIR/manifest.json}"
 
   node -e "
     const fs = require('fs');
     const path = require('path');
-    const outputDir = process.argv[1];
+    const manifestFile = process.argv[1];
     const sources = process.argv[2].split(',').map((s) => s.trim()).filter(Boolean);
     const manifest = {
       sources: sources.map((source) => ({
@@ -283,10 +284,8 @@ write_manifest() {
         session: 'sources/' + source + '-session.json',
       })),
     };
-    fs.writeFileSync(path.join(outputDir, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
-  " "$OUTPUT_DIR" "$sources_csv"
-
-  echo "[export] ✓ $OUTPUT_DIR/manifest.json"
+    fs.writeFileSync(manifestFile, JSON.stringify(manifest, null, 2) + '\n');
+  " "$manifest_file" "$sources_csv"
 }
 
 export_source() {
@@ -317,10 +316,11 @@ export_source() {
 export_sources_to_manifest() {
   local sources=("$@")
   local sources_csv
+  local tmp_source_dir
+  local tmp_manifest
 
-  rm -rf "$SOURCE_OUTPUT_DIR"
-  mkdir -p "$SOURCE_OUTPUT_DIR"
-  rm -f "$OUTPUT_DIR/manifest.json" "$OUTPUT_DIR"/usage-*.json
+  tmp_source_dir="$(mktemp -d "$OUTPUT_DIR/sources.tmp.XXXXXX")"
+  tmp_manifest="$(mktemp "$OUTPUT_DIR/manifest.tmp.XXXXXX")"
   EXPORTED_SOURCES=()
 
   for source in "${sources[@]}"; do
@@ -330,38 +330,71 @@ export_sources_to_manifest() {
       echo "[export] - $source (no local data path found)"
       continue
     fi
-    export_source "$source" "$SOURCE_OUTPUT_DIR" || true
+    if ! export_source "$source" "$tmp_source_dir"; then
+      echo "[export] - $source (no usable ccusage data)"
+    fi
   done
 
   if [[ "${#EXPORTED_SOURCES[@]}" -eq 0 ]]; then
+    rm -rf "$tmp_source_dir"
+    rm -f "$tmp_manifest"
     echo "[export] No ccusage source data found."
     return 1
   fi
 
   sources_csv="$(IFS=','; echo "${EXPORTED_SOURCES[*]}")"
-  write_manifest "$sources_csv"
+  write_manifest "$sources_csv" "$tmp_manifest"
+  rm -rf "$SOURCE_OUTPUT_DIR"
+  mv "$tmp_source_dir" "$SOURCE_OUTPUT_DIR"
+  mv "$tmp_manifest" "$OUTPUT_DIR/manifest.json"
+  rm -f "$OUTPUT_DIR"/usage-*.json
+  echo "[export] ✓ $OUTPUT_DIR/manifest.json"
   echo "[export] Exported sources: $sources_csv"
+}
+
+export_focused_source() {
+  local source="$1"
+  local tmp_dir
+  local exported=0
+
+  if ! source_has_local_data "$source"; then
+    echo "[export] No local data path found for source: $source"
+    return 1
+  fi
+
+  tmp_dir="$(mktemp -d "$OUTPUT_DIR/usage.tmp.XXXXXX")"
+  if run_ccusage_export "$source" daily "$tmp_dir/usage-daily.json"; then
+    echo "[export] ✓ $OUTPUT_DIR/usage-daily.json"
+    exported=1
+  fi
+  if run_ccusage_export "$source" monthly "$tmp_dir/usage-monthly.json"; then
+    echo "[export] ✓ $OUTPUT_DIR/usage-monthly.json"
+  fi
+  if run_ccusage_export "$source" session "$tmp_dir/usage-session.json"; then
+    echo "[export] ✓ $OUTPUT_DIR/usage-session.json"
+  fi
+
+  if [[ "$exported" -eq 0 ]]; then
+    rm -rf "$tmp_dir"
+    echo "[export] No ccusage data found for source: $source"
+    return 1
+  fi
+
+  rm -f "$OUTPUT_DIR/manifest.json" "$OUTPUT_DIR"/usage-*.json
+  find "$tmp_dir" -type f -name 'usage-*.json' -exec mv {} "$OUTPUT_DIR/" \;
+  rm -rf "$tmp_dir"
 }
 
 if [[ -n "$SOURCES" ]]; then
   IFS=',' read -ra SOURCE_LIST <<< "$SOURCES"
   echo "[export] Exporting focused ccusage data for: $SOURCES"
-  export_sources_to_manifest "${SOURCE_LIST[@]}" || true
+  export_sources_to_manifest "${SOURCE_LIST[@]}"
 elif [[ -n "$SOURCE" ]]; then
   echo "[export] Exporting focused ccusage data for: $SOURCE"
-  rm -f "$OUTPUT_DIR/manifest.json"
-  exported=0
-  run_ccusage_export "$SOURCE" daily "$OUTPUT_DIR/usage-daily.json" && echo "[export] ✓ $OUTPUT_DIR/usage-daily.json"
-  [[ -f "$OUTPUT_DIR/usage-daily.json" ]] && exported=1
-  run_ccusage_export "$SOURCE" monthly "$OUTPUT_DIR/usage-monthly.json" && echo "[export] ✓ $OUTPUT_DIR/usage-monthly.json"
-  [[ -f "$OUTPUT_DIR/usage-monthly.json" ]] && exported=1
-  run_ccusage_export "$SOURCE" session "$OUTPUT_DIR/usage-session.json" && echo "[export] ✓ $OUTPUT_DIR/usage-session.json"
-  [[ -f "$OUTPUT_DIR/usage-session.json" ]] && exported=1
-  [[ "$exported" -eq 0 ]] && echo "[export] No ccusage data found for source: $SOURCE"
-  rm -f "$OUTPUT_DIR/manifest.json"
+  export_focused_source "$SOURCE"
 else
   echo "[export] Detecting ccusage data by source..."
-  export_sources_to_manifest "${SUPPORTED_SOURCES[@]}" || true
+  export_sources_to_manifest "${SUPPORTED_SOURCES[@]}"
 fi
 
 echo "[export] Done. Build the static site with: npm run build && open dist/index.html"
