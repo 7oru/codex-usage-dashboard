@@ -1,8 +1,8 @@
 # Local AI Usage Dashboard
 
-> 本地可视化 ccusage 支持的 AI Coding 会话用量，一键导出 AI-Native 工程报告。
+> 本地可视化 ccusage 支持的 AI Coding 会话用量，导出一份简单的用量报告。
 
-**把本地 AI-assisted coding 活动变成清晰、可分享的工程指标。**
+**一个用于回看 AI-assisted coding 用量的小型本地 dashboard。**
 
 [English](README.md) | [中文](README.zh.md) | [在线 Sample Dashboard](https://7oru.github.io/local-ai-usage-dashboard/dist-sample/)
 
@@ -20,18 +20,18 @@ AI-assisted development 很难只凭记忆说清楚。
 
 ## 快速开始
 
-不用 clone，直接生成一个本地静态 HTML dashboard：
+直接用 npm package 生成一个本地静态 HTML dashboard：
 
 ```bash
-npx github:7oru/local-ai-usage-dashboard
+npx local-ai-usage-dashboard
 ```
 
 它会导出本机 ccusage 数据，把数据内联进一个静态 HTML 文件，然后直接用浏览器打开。不需要开 dev server。
 
-等 npm package 发布后，命令会变成：
+也可以直接从 GitHub 运行：
 
 ```bash
-npx local-ai-usage-dashboard
+npx github:7oru/local-ai-usage-dashboard
 ```
 
 本地开发再 clone：
@@ -165,9 +165,9 @@ local-ai-usage-dashboard/
 ### 一条命令生成本地静态 HTML
 
 ```bash
-npx github:7oru/local-ai-usage-dashboard
-npx github:7oru/local-ai-usage-dashboard --source openclaw
-npx github:7oru/local-ai-usage-dashboard --sources codex,openclaw,kimi --output ./ai-usage-dashboard.html
+npx local-ai-usage-dashboard
+npx local-ai-usage-dashboard --source openclaw
+npx local-ai-usage-dashboard --sources codex,openclaw,kimi --output ./ai-usage-dashboard.html
 ```
 
 CLI 会通过 `ccusage` 导出用量数据，把 JSON 内联进单个静态 HTML 文件，并通过 `file://` 打开，不会启动本地 server。

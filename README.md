@@ -1,8 +1,8 @@
 # Local AI Usage Dashboard
 
-> Visualize local ccusage-supported AI coding sessions and export an AI-native engineering report.
+> Visualize local ccusage-supported AI coding sessions and export a simple usage report.
 
-**Turn your local AI-assisted coding activity into clear, shareable engineering metrics.**
+**A small local dashboard for reviewing AI-assisted coding usage.**
 
 [English](README.md) | [中文](README.zh.md) | [Live Sample Dashboard](https://7oru.github.io/local-ai-usage-dashboard/dist-sample/)
 
@@ -18,18 +18,18 @@ It reads local session logs through `ccusage`, crunches the numbers, and produce
 
 ## Quick Start
 
-Run it as a one-off local HTML dashboard:
+Run the published package as a one-off local HTML dashboard:
 
 ```bash
-npx github:7oru/local-ai-usage-dashboard
+npx local-ai-usage-dashboard
 ```
 
 This exports your local ccusage data, writes a static HTML file with the data inlined, and opens it directly in your browser. No dev server is required.
 
-After the package is published to npm, the command becomes:
+You can also run it directly from GitHub:
 
 ```bash
-npx local-ai-usage-dashboard
+npx github:7oru/local-ai-usage-dashboard
 ```
 
 For local development:
@@ -163,9 +163,9 @@ local-ai-usage-dashboard/
 ### One-command static HTML
 
 ```bash
-npx github:7oru/local-ai-usage-dashboard
-npx github:7oru/local-ai-usage-dashboard --source openclaw
-npx github:7oru/local-ai-usage-dashboard --sources codex,openclaw,kimi --output ./ai-usage-dashboard.html
+npx local-ai-usage-dashboard
+npx local-ai-usage-dashboard --source openclaw
+npx local-ai-usage-dashboard --sources codex,openclaw,kimi --output ./ai-usage-dashboard.html
 ```
 
 The CLI exports usage data through `ccusage`, writes a single static HTML file with the usage JSON inlined, and opens it via `file://`. It does not start a local server.

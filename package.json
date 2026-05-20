@@ -1,10 +1,25 @@
 {
   "name": "local-ai-usage-dashboard",
   "version": "0.1.0",
+  "description": "Generate a local static dashboard from ccusage-supported AI coding usage data.",
   "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/7oru/local-ai-usage-dashboard.git"
+  },
+  "homepage": "https://github.com/7oru/local-ai-usage-dashboard#readme",
+  "bugs": {
+    "url": "https://github.com/7oru/local-ai-usage-dashboard/issues"
+  },
+  "keywords": [
+    "ccusage",
+    "ai-coding",
+    "usage-dashboard",
+    "local-first"
+  ],
   "bin": {
-    "local-ai-usage-dashboard": "./bin/local-ai-usage-dashboard.js"
+    "local-ai-usage-dashboard": "bin/local-ai-usage-dashboard.js"
   },
   "files": [
     "bin/",
