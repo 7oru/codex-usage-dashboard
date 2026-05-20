@@ -18,6 +18,22 @@ It reads local session logs through `ccusage`, crunches the numbers, and produce
 
 ## Quick Start
 
+Run it as a one-off local HTML dashboard:
+
+```bash
+npx github:7oru/local-ai-usage-dashboard
+```
+
+This exports your local ccusage data, writes a static HTML file with the data inlined, and opens it directly in your browser. No dev server is required.
+
+After the package is published to npm, the command becomes:
+
+```bash
+npx local-ai-usage-dashboard
+```
+
+For local development:
+
 ```bash
 git clone https://github.com/7oru/local-ai-usage-dashboard.git
 cd local-ai-usage-dashboard
@@ -143,6 +159,16 @@ local-ai-usage-dashboard/
 ```
 
 ## Build & Local Preview
+
+### One-command static HTML
+
+```bash
+npx github:7oru/local-ai-usage-dashboard
+npx github:7oru/local-ai-usage-dashboard --source openclaw
+npx github:7oru/local-ai-usage-dashboard --sources codex,openclaw,kimi --output ./ai-usage-dashboard.html
+```
+
+The CLI exports usage data through `ccusage`, writes a single static HTML file with the usage JSON inlined, and opens it via `file://`. It does not start a local server.
 
 ### Development
 

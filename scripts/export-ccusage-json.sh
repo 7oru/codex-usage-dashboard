@@ -11,7 +11,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-OUTPUT_DIR="$ROOT_DIR/public/data"
+OUTPUT_DIR="${OUTPUT_DIR:-$ROOT_DIR/public/data}"
 SOURCE_OUTPUT_DIR="$OUTPUT_DIR/sources"
 
 mkdir -p "$OUTPUT_DIR"
@@ -437,4 +437,6 @@ else
   export_sources_to_manifest "${SUPPORTED_SOURCES[@]}"
 fi
 
-echo "[export] Done. Build the static site with: npm run build && open dist/index.html"
+if [[ "${EXPORT_DATA_DONE_MESSAGE:-1}" != "0" ]]; then
+  echo "[export] Done. Build the static site with: npm run build && open dist/index.html"
+fi

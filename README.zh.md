@@ -20,6 +20,22 @@ AI-assisted development 很难只凭记忆说清楚。
 
 ## 四行命令跑起来
 
+不用 clone，直接生成一个本地静态 HTML dashboard：
+
+```bash
+npx github:7oru/local-ai-usage-dashboard
+```
+
+它会导出本机 ccusage 数据，把数据内联进一个静态 HTML 文件，然后直接用浏览器打开。不需要开 dev server。
+
+等 npm package 发布后，命令会变成：
+
+```bash
+npx local-ai-usage-dashboard
+```
+
+本地开发再 clone：
+
 ```bash
 git clone https://github.com/7oru/local-ai-usage-dashboard.git
 cd local-ai-usage-dashboard
@@ -145,6 +161,16 @@ local-ai-usage-dashboard/
 ```
 
 ## 构建与本地预览
+
+### 一条命令生成本地静态 HTML
+
+```bash
+npx github:7oru/local-ai-usage-dashboard
+npx github:7oru/local-ai-usage-dashboard --source openclaw
+npx github:7oru/local-ai-usage-dashboard --sources codex,openclaw,kimi --output ./ai-usage-dashboard.html
+```
+
+CLI 会通过 `ccusage` 导出用量数据，把 JSON 内联进单个静态 HTML 文件，并通过 `file://` 打开，不会启动本地 server。
 
 ### 开发
 
