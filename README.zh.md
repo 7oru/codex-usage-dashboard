@@ -18,7 +18,7 @@ AI-assisted development 很难只凭记忆说清楚。
 
 > **Privacy First** —— 你的 prompt、代码、数据，全留在本地。
 
-## 四行命令跑起来
+## 快速开始
 
 不用 clone，直接生成一个本地静态 HTML dashboard：
 
