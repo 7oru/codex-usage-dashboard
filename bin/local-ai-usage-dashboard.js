@@ -198,7 +198,19 @@ function exportUsageData(options) {
     ...process.env,
     OUTPUT_DIR: outputDir,
     EXPORT_DATA_DONE_MESSAGE: '0',
+    npm_config_yes: 'true',
   };
+
+  for (const key of Object.keys(env)) {
+    if (
+      key === 'npm_config_package' ||
+      key === 'npm_config_packages' ||
+      key.startsWith('npm_package_') ||
+      key.startsWith('npm_lifecycle_')
+    ) {
+      delete env[key];
+    }
+  }
 
   if (options.timeout) {
     env.CCUSAGE_REPORT_TIMEOUT_SECONDS = options.timeout;
