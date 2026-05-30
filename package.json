@@ -33,7 +33,8 @@
     "build": "bash scripts/build.sh",
     "build:sample": "BUILD_DIR=dist-sample USAGE_DATA_FILE=sample-data/usage.json bash scripts/build.sh",
     "export:data": "bash scripts/export-ccusage-json.sh",
-    "test": "npm run test:unit",
+    "test": "npm run test:unit && npm run test:export",
+    "test:export": "tsx --test tests/**/*.test.ts",
     "test:unit": "tsx --test src/**/*.test.ts",
     "typecheck:test": "tsc --noEmit -p tsconfig.test.json"
   },
