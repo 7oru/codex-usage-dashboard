@@ -33,11 +33,17 @@
     "build": "bash scripts/build.sh",
     "build:sample": "BUILD_DIR=dist-sample USAGE_DATA_FILE=sample-data/usage.json bash scripts/build.sh",
     "export:data": "bash scripts/export-ccusage-json.sh",
+    "lint": "eslint .",
+    "prepack": "npm run build:sample",
+    "prepublishOnly": "npm run verify:package",
     "smoke:static": "npm run build:sample && playwright test",
     "test": "npm run test:unit && npm run test:export",
     "test:export": "tsx --test tests/**/*.test.ts",
     "test:unit": "tsx --test src/**/*.test.ts",
-    "typecheck:test": "tsc --noEmit -p tsconfig.test.json"
+    "typecheck": "tsc --noEmit -p tsconfig.app.json && tsc --noEmit -p tsconfig.node.json && npm run typecheck:test",
+    "typecheck:test": "tsc --noEmit -p tsconfig.test.json",
+    "verify": "npm run typecheck && npm run lint && npm run test && npm run build && npm run smoke:static",
+    "verify:package": "npm run verify && npm pack --dry-run --json"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
