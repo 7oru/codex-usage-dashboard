@@ -33,6 +33,7 @@
     "build": "bash scripts/build.sh",
     "build:sample": "BUILD_DIR=dist-sample USAGE_DATA_FILE=sample-data/usage.json bash scripts/build.sh",
     "export:data": "bash scripts/export-ccusage-json.sh",
+    "smoke:static": "npm run build:sample && playwright test",
     "test": "npm run test:unit && npm run test:export",
     "test:export": "tsx --test tests/**/*.test.ts",
     "test:unit": "tsx --test src/**/*.test.ts",
@@ -40,6 +41,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.60.0",
     "@types/node": "^25.9.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
